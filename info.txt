@@ -1,0 +1,23 @@
+**Data Upload:**
+
+- The user interacts with the frontend GUI to upload a spreadsheet containing their data.
+- The frontend sends an HTTP POST request to the backend API endpoint responsible for handling data uploads.
+- The backend receives the request and performs necessary validation checks on the uploaded file format, size, and other criteria.
+- Once the validation is successful, the backend processes the uploaded data by reading and converting it into the appropriate format for further usage.
+- The processed data is then stored temporarily in the backend, such as in memory or a temporary file, ready to be used in subsequent steps.
+
+**Network Building:**
+
+- The user interacts with the frontend GUI to define the network structure, select network types, and configure hyperparameters.
+- The frontend sends an HTTP POST request to the backend API endpoint responsible for network building.
+- The backend receives the request and extracts the relevant information such as network types, hyperparameters, and data information.
+- Based on the provided information, the backend dynamically generates the network architecture, encapsulates the chosen network types, and - -configures the hyperparameters.
+- The constructed network is stored in the backend, typically as an object or data structure, representing the configured network.
+
+**Hyperparameter Changes:**
+
+- The user interacts with the frontend GUI to modify specific hyperparameters of the built network.
+- The frontend sends an HTTP POST request to the backend API endpoint responsible for handling hyperparameter changes.
+- The backend receives the request and extracts the network identifier or relevant information to identify the target network.
+- The backend locates the corresponding network object in its storage and updates the specified hyperparameters according to the user's input.
+- The updated network state is persisted in the backend, ensuring that the changes are stored for subsequent training or usage.
