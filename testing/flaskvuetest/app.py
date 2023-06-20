@@ -47,5 +47,16 @@ def all_books():
         response_object['books'] = BOOKS
     return jsonify(response_object)
 
+api_keys = ['test1', 'test2', 'test3']
+
+@app.route('/add', methods=['GET'])
+def add():
+    api_key = request.headers.get('API-Key')
+    if api_key not in api_keys:
+        return {'error': 'Invalid API Key'}, 401
+    param1 = request.args.get('one')
+    param2 = request.args.get('two')   
+    return jsonify(int(param1) + int(param2)), 200
+
 if __name__ == '__main__':
-    app.run()
+    app.run(port=5001)
