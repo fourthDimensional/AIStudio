@@ -1,37 +1,66 @@
 import pandas as pd
 import numpy as np
+import itertools
+import random
 
 # Make numpy values easier to read.
 np.set_printoptions(precision=3, suppress=True)
 
 import tensorflow as tf
-from tensorflow.keras import layers
+import tensorflow.keras as ks
 
-abalone_train = pd.read_csv(
-    "https://storage.googleapis.com/download.tensorflow.org/data/abalone_train.csv",
-    names=["Length", "Diameter", "Height", "Whole weight", "Shucked weight",
-           "Viscera weight", "Shell weight", "Age"])
+inputs = ks.Input(shape=(10,))
+dense = ks.layers.Dense(17, activation="relu")
+x = dense(inputs)
+x = ks.layers.Dense(20, activation="relu")(x)
+x = ks.layers.Dense(17, activation="sigmoid")(x)
+outputs = ks.layers.Dense(10)(x)
 
-abalone_train.head()
+model = ks.Model(inputs=inputs, outputs=outputs, name="test_model")
 
-abalone_features = abalone_train.copy()
-abalone_labels = abalone_features.pop('Age')
+model.compile(
+    loss='binary_crossentropy',
+    optimizer=ks.optimizers.Adam(),
+    metrics=['accuracy']
+)
 
-abalone_features = np.array(abalone_features)
+def generate_permutations(x):
+    return [list(p) for p in itertools.product([0, 1], repeat=x)]
 
-print(abalone_features)
+def generate_unique_arrays(x):
+    permutations = generate_permutations(x)
+    return [permutations[i % len(permutations)] for i in range(len(permutations))]
 
-normalize = layers.Normalization()
-normalize.adapt(abalone_features)
+def shuffle_arrays(arrays):
+    random.shuffle(arrays)
 
-abalone_model = tf.keras.Sequential([
-  normalize,
-  layers.Dense(64),
-  layers.Dense(1)
-])
+def invert_arrays(arrays):
+    return [[1 - num for num in arr] for arr in arrays]
 
-abalone_model.compile(loss = tf.keras.losses.MeanSquaredError(),
-                      optimizer = tf.keras.optimizers.Adam())
+x = 10
+arrays = generate_unique_arrays(x)
+shuffle_arrays(arrays)
+inverted_arrays = invert_arrays(arrays)
 
-abalone_model.fit(abalone_features, abalone_labels, epochs=1000)
+x_train, y_train = arrays, inverted_arrays
 
+arrays = generate_unique_arrays(x)
+shuffle_arrays(arrays)
+inverted_arrays = invert_arrays(arrays)
+
+x_test, y_test = arrays, inverted_arrays
+
+print(x_test)
+
+history = model.fit(x_train, y_train, batch_size=2, epochs=50)
+
+test_scores = model.evaluate(x_test, y_test, verbose=2)
+print("accuracy:", test_scores[1])
+model.summary()
+
+# Provide inputs for prediction
+input_data = np.array([[1, 0, 1, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 0, 1, 0, 1, 1, 0, 1], [0, 1, 0, 0, 1, 1, 1, 0, 1, 0], [0, 0, 1, 0, 1, 0, 0, 1, 0, 1], [0, 1, 1, 0, 0, 0, 0, 0, 1, 0], [0, 1, 1, 1, 0, 0, 1, 0, 0, 1], [1, 1, 0, 1, 1, 1, 1, 0, 1, 0], [1, 0, 0, 1, 1, 0, 1, 1, 0, 1], [0, 0, 1, 0, 1, 0, 0, 0, 1, 1], [0, 1, 1, 0, 0, 1, 1, 1, 1, 1], [0, 0, 1, 1, 1, 0, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 0, 0, 0, 1], [0, 1, 1, 1, 0, 0, 0, 1, 1, 0], [1, 1, 0, 1, 0, 0, 1, 0, 1, 1], [0, 0, 1, 1, 0, 0, 1, 0, 0, 1], [0, 0, 0, 1, 1, 0, 1, 0, 0, 0], [0, 1, 0, 1, 0, 1, 0, 0, 0, 1], [1, 0, 1, 0, 1, 1, 1, 0, 0, 0], [0, 1, 0, 1, 1, 1, 0, 0, 1, 1], [1, 0, 1, 1, 1, 1, 0, 1, 1, 0], [1, 0, 1, 1, 1, 0, 0, 0, 0, 1], [0, 1, 0, 0, 0, 0, 0, 1, 1, 1], [0, 1, 0, 0, 1, 1, 0, 1, 1, 0], [0, 0, 0, 1, 1, 0, 1, 1, 0, 0], [1, 0, 0, 1, 0, 0, 0, 0, 0, 0], [0, 1, 1, 1, 1, 0, 0, 0, 1, 1], [0, 1, 1, 0, 1, 0, 0, 0, 0, 0], [0, 1, 1, 0, 0, 0, 0, 1, 0, 1], [0, 0, 1, 0, 1, 0, 1, 0, 1, 0], [1, 0, 0, 1, 1, 1, 1, 0, 0, 0], [1, 1, 1, 1, 0, 1, 1, 1, 0, 1], [1, 0, 0, 0, 1, 0, 0, 0, 0, 1], [1, 1, 1, 0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 1, 1, 1, 1, 0, 0, 1], [1, 0, 0, 0, 1, 0, 0, 0, 1, 1], [0, 0, 1, 0, 0, 0, 0, 1, 0, 1], [1, 0, 1, 1, 1, 0, 1, 0, 1, 1], [1, 0, 0, 0, 1, 1, 1, 1, 0, 0], [0, 1, 1, 1, 1, 0, 1, 0, 1, 1], [0, 1, 0, 1, 0, 0, 0, 0, 1, 0], [0, 1, 0, 1, 0, 0, 0, 0, 0, 0], [0, 0, 1, 0, 1, 1, 0, 0, 1, 0], [1, 0, 1, 1, 1, 1, 1, 1, 0, 0], [0, 0, 0, 0, 1, 0, 1, 0, 1, 0], [1, 0, 0, 0, 0, 1, 0, 1, 1, 0], [0, 1, 1, 0, 0, 0, 1, 0, 1, 0]])  # Example input
+threshold = 0.5
+predictions = model.predict(input_data)
+class_labels = (predictions > threshold).astype(int)
+print("Predictions:", class_labels)
