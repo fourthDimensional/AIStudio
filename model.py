@@ -1,7 +1,7 @@
 import os
 import re
 import pandas as pd
-import chardet
+
 
 def check_naming_convention(string):
     pattern = r'^[a-z]+(_[a-z]+)*$'
@@ -9,41 +9,41 @@ def check_naming_convention(string):
         return True
     return False
 
-def create_model(file_path, name, visual_name, type, model_path):
+
+def create_model(file_path, name, visual_name, network_type, model_path):
     valid_network_types = ["regression", "classification"]
-    
+
     # * Verifies that the inputs are supported/usable
-    if type not in valid_network_types:
+    if network_type not in valid_network_types:
         return {'error': 'Unsupported network type'}
-    
-    if os.path.exists(file_path) == False:
+
+    if not os.path.exists(file_path):
         return {'error': 'Dataset does not exist; create one before trying to construct a model'}, 409
-    
-    if check_naming_convention(name) == False:
+
+    if not check_naming_convention(name):
         return {'error': 'Internal name not supported'}, 409
-    
-    if type == 'regression':
+
+    if network_type == 'regression':
         pass
-    elif type == 'classification':
+    elif network_type == 'classification':
         pass
-    
-    model = Model(name, visual_name, type, model_path, file_path)
-    
+
+    model = Model(name, visual_name, network_type, model_path, file_path)
+
     return [{'info': 'Model created successfully'}, model]
-    
-    
-    
+
+
 class Model:
-    def __init__(self, name, visual_name, type, model_path, dataset_path):
+    def __init__(self, name, visual_name, network_type, model_path, dataset_path):
         self.name = name
         self.visual_name = visual_name
-        self.type = type
+        self.type = network_type
         self.dataset_path = dataset_path
         self.model_path = model_path
-        
+
         self.network_count = 0
         self.networks = []
-        
+
         self.features = None
         self.labels = None
 
@@ -66,16 +66,14 @@ class Model:
         else:
             print("Failed to read the dataset.")
 
-    def add_preprocessing_layer(self, type):
+    def add_preprocessing_layer(self, network_type):
         pass
-    
+
     def remove_preprocessing_layer(self, layer_id):
         pass
-    
-    
-    
+
     def __len__(self):
         pass
+
     def __str__(self):
         pass
-    
