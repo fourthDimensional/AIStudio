@@ -2,7 +2,6 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import os
 import model as md
-import pickle
 import utils
 
 # instantiate the app
@@ -86,15 +85,15 @@ def create_model():
     return_value = model[0]
     model = model[1]
 
-    utils.save(model, model_path)
+    model.process_columns()
 
-    print(model.train())
+    utils.save(model, model_path)
 
     return return_value
 
 
 @app.route('/model/name', methods=['GET'])
-def return_model_name():
+def get_model_name():
     api_key = request.headers.get('API-Key')
     if api_key not in api_keys:
         return {'error': 'Invalid API Key'},
@@ -107,9 +106,22 @@ def return_model_name():
     if not os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], "model_{}_{}.pk1".format(given_id, api_key))):
         return {'error': 'Model does not exist; create one before trying again'}, 409
 
-    model = utils.load_model_from_file(given_id, api_key)
+    model = utils.load_model_from_file(given_id, api_key, app.config['UPLOAD_FOLDER'])
 
     return model.name
+
+
+@app.route('/model/columns/', methods=['GET'])
+def get_column_count():
+    api_key = request.headers.get('API-Key')
+    if api_key not in api_keys:
+        return {'error': 'Invalid API Key'},
+
+    given_id = request.form.get('id')
+
+    model = utils.load_model_from_file(given_id, api_key, app.config['UPLOAD_FOLDER'])
+
+    return str(model.process_columns()), 200
 
 
 if __name__ == '__main__':

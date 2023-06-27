@@ -1,13 +1,13 @@
 import os
-import re
-import pandas as pd
+import utils
+import logging
+
+logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d [%(filename)s])',
+                    datefmt='%I:%M:%S %p',
+                    level=logging.DEBUG)
 
 
-def check_naming_convention(string):
-    pattern = r'^[a-z]+(_[a-z]+)*$'
-    if re.match(pattern, string):
-        return True
-    return False
+
 
 
 def create_model(file_path, name, visual_name, network_type, model_path):
@@ -20,7 +20,7 @@ def create_model(file_path, name, visual_name, network_type, model_path):
     if not os.path.exists(file_path):
         return {'error': 'Dataset does not exist; create one before trying to construct a model'}, 409
 
-    if not check_naming_convention(name):
+    if not utils.check_naming_convention(name):
         return {'error': 'Internal name not supported'}, 409
 
     if network_type == 'regression':
@@ -46,18 +46,10 @@ class Model:
 
         self.features = None
         self.labels = None
+        self.column_hash = {}
 
     def train(self):
-        encodings = ["utf-8", "utf-8-sig", "iso-8859-1", "latin1", "cp1252"]
-        for encoding in encodings:
-            try:
-                with open(self.dataset_path, 'r', encoding=encoding, errors='replace') as f:
-                    dataframe_csv = pd.read_csv(f)
-                break
-            except Exception as e:
-                dataframe_csv = None
-                print(f"Error reading with {encoding}: {e}")
-                pass
+        dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
 
         if dataframe_csv is not None:
             column_names = dataframe_csv.columns.tolist()
@@ -65,6 +57,18 @@ class Model:
             return column_names
         else:
             print("Failed to read the dataset.")
+
+    def process_columns(self):
+        dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
+
+        columns = dataframe_csv.columns.tolist()
+
+        for x in range(0, len(columns)):
+            self.column_hash[x] = columns[x]
+
+        logging.info(self.column_hash)
+
+        return len(columns)
 
     def add_preprocessing_layer(self, network_type):
         pass
@@ -77,3 +81,4 @@ class Model:
 
     def __str__(self):
         pass
+
