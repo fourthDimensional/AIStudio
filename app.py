@@ -3,6 +3,7 @@ from flask_cors import CORS
 import os
 import model as md
 import utils
+import data_proc
 
 # instantiate the app
 app = Flask(__name__)
@@ -84,8 +85,7 @@ def create_model():
     model = md.create_model(file_path, model_name, visual_name, given_type, model_path)
     return_value = model[0]
     model = model[1]
-
-    model.process_columns()
+    print(model.train())
 
     utils.save(model, model_path)
 
@@ -96,7 +96,7 @@ def create_model():
 def get_model_name():
     api_key = request.headers.get('API-Key')
     if api_key not in api_keys:
-        return {'error': 'Invalid API Key'},
+        return {'error': 'Invalid API Key'}, 401
 
     given_id = request.form.get('id')
 
@@ -112,16 +112,80 @@ def get_model_name():
 
 
 @app.route('/model/columns/', methods=['GET'])
-def get_column_count():
+def get_columns():
     api_key = request.headers.get('API-Key')
     if api_key not in api_keys:
-        return {'error': 'Invalid API Key'},
+        return {'error': 'Invalid API Key'}, 401
+
+    # TODO Add id checking
 
     given_id = request.form.get('id')
 
     model = utils.load_model_from_file(given_id, api_key, app.config['UPLOAD_FOLDER'])
 
-    return str(model.process_columns()), 200
+    return model.process_columns(process_modifications=True), 200
+
+
+@app.route('/model/columns/', methods=['DELETE'])
+def add_column_deletion():
+    api_key = request.headers.get('API-Key')
+    if api_key not in api_keys:
+        return {'error': 'Invalid API Key'}, 401
+
+    given_id = request.form.get('id')
+    given_column = request.form.get('column')
+
+    # TODO Add id checking
+
+    model = utils.load_model_from_file(given_id, api_key, app.config['UPLOAD_FOLDER'])
+
+    if model.data_modification_exists(data_proc.Column_Deletion, given_column):
+        return {'error': 'Column Deletion already added'}, 400
+
+    if given_column not in model.process_columns(process_modifications=False):
+        return {'error': 'Given column does not exist'}, 400
+
+    model.delete_column(str(given_column))
+
+    utils.save(model, model.model_path)
+
+    return {'info': 'Column Deletion added'}, 200
+
+
+@app.route('/model/columns/', methods=['POST'])
+def undo_column_deletion():
+    api_key = request.headers.get('API-Key')
+    if api_key not in api_keys:
+        return {'error': 'Invalid API Key'}, 401
+
+    given_id = request.form.get('id')
+    given_column = request.form.get('column')
+
+    # TODO Add id checking
+
+    model = utils.load_model_from_file(given_id, api_key, app.config['UPLOAD_FOLDER'])
+
+    if not model.data_modification_exists(data_proc.Column_Deletion, given_column):
+        return {'error': 'Column Deletion does not exist'}, 400
+
+    model.add_deleted_column(given_column)
+
+    utils.save(model, model.model_path)
+
+    return {'info': 'Column Deletion removed'}, 200
+
+
+@app.route('/model/preprocessing/create', methods=['POST'])
+def create_preprocessing_layer():
+    api_key = request.headers.get('API-Key')
+    if api_key not in api_keys:
+        return {'error': 'Invalid API Key'}, 401
+
+    given_id = request.form.get('id')
+
+    # TODO Add id checking
+
+    model = utils.load_model_from_file(given_id, api_key, app.config['UPLOAD_FOLDER'])
 
 
 if __name__ == '__main__':

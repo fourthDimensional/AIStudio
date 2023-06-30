@@ -1,13 +1,12 @@
 import os
 import utils
 import logging
+import data_proc
+import tensorflow as tf
 
 logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d [%(filename)s])',
                     datefmt='%I:%M:%S %p',
                     level=logging.DEBUG)
-
-
-
 
 
 def create_model(file_path, name, visual_name, network_type, model_path):
@@ -30,6 +29,8 @@ def create_model(file_path, name, visual_name, network_type, model_path):
 
     model = Model(name, visual_name, network_type, model_path, file_path)
 
+    model.train()
+
     return [{'info': 'Model created successfully'}, model]
 
 
@@ -42,24 +43,48 @@ class Model:
         self.model_path = model_path
 
         self.network_count = 0
+        self.data_modifications = []
         self.networks = []
 
         self.features = None
         self.labels = None
         self.column_hash = {}
 
+        self.preprocessing_layers = []
+
     def train(self):
         dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
 
         if dataframe_csv is not None:
             column_names = dataframe_csv.columns.tolist()
-            # labels = dataframe_csv.pop('salary')
             return column_names
         else:
             print("Failed to read the dataset.")
 
-    def process_columns(self):
+        logging.info(self.data_modifications)
+        for each in self.data_modifications:
+            dataframe_csv = each.process(dataframe_csv)
+
+        inputs = {}
+
+        for name, column in dataframe_csv.items():
+            dtype = column.dtype
+            if dtype == object:
+                dtype = tf.string
+            else:
+                dtype = tf.float32
+
+            inputs[name] = tf.keras.Input(shape=(1,), name=name, dtype=dtype)
+
+        return inputs
+
+    def process_columns(self, process_modifications):
         dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
+
+        if process_modifications:
+            logging.info(self.data_modifications)
+            for each in self.data_modifications:
+                dataframe_csv = each.process(dataframe_csv)
 
         columns = dataframe_csv.columns.tolist()
 
@@ -68,7 +93,27 @@ class Model:
 
         logging.info(self.column_hash)
 
-        return len(columns)
+        return columns
+
+    def delete_column(self, column_name):
+        self.data_modifications.append(data_proc.Column_Deletion(column_name))
+
+    def add_deleted_column(self, column_name):
+        for modification in self.data_modifications:
+            if isinstance(modification, data_proc.Column_Deletion) and str(modification) == column_name:
+                self.data_modifications.remove(modification)
+
+    def data_modification_exists(self, class_input, string_repr):
+        for modification in self.data_modifications:
+            if isinstance(modification, class_input) and str(modification) == string_repr:
+                return True
+        return
+
+    def data_preprocessing_layer_exists(self, class_input, layer_id):
+        for layer in self.preprocessing_layers:
+            if isinstance(layer, class_input) and str(layer) == layer_id:
+                return True
+        return
 
     def add_preprocessing_layer(self, network_type):
         pass
@@ -81,4 +126,3 @@ class Model:
 
     def __str__(self):
         pass
-
