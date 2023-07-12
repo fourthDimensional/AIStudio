@@ -1,7 +1,9 @@
-import os
 import logging
-from routes.helpers import data_proc, utils
+import os
+
 import tensorflow as tf
+
+from routes.helpers import data_proc, utils
 
 logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d [%(filename)s])',
                     datefmt='%I:%M:%S %p',
@@ -114,10 +116,10 @@ class Model:
                 return True
         return
 
-    def add_preprocessing_layer(self, network_type):
+    def add_layer(self, network_type):
         pass
 
-    def remove_preprocessing_layer(self, layer_id):
+    def remove_layer(self, layer_id):
         pass
 
     def __len__(self):

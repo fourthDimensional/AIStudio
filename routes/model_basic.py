@@ -1,6 +1,8 @@
-from flask import request, Blueprint, current_app
-from routes.helpers import utils, model as md
 import os
+
+from flask import Blueprint, current_app, request
+
+from routes.helpers import model as md, utils
 
 model_basic = Blueprint('model_basic', __name__)
 
@@ -45,6 +47,13 @@ def create_model():
     return return_value, REQUEST_CREATED
 
 
+@model_basic.route('/model', methods=['delete'])
+def delete_model():
+    api_key = request.headers.get('API-Key')
+    if api_key not in api_keys:
+        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
+
+
 @model_basic.route('/model/name', methods=['GET'])
 def get_model_name():
     api_key = request.headers.get('API-Key')
@@ -56,7 +65,8 @@ def get_model_name():
     if given_id is None or given_id == '':
         return {'error': 'No Dataset ID provided'}, BAD_REQUEST
 
-    if not os.path.exists(os.path.join(current_app.config['UPLOAD_FOLDER'], "model_{}_{}.pk1".format(given_id, api_key))):
+    if not os.path.exists(
+            os.path.join(current_app.config['UPLOAD_FOLDER'], "model_{}_{}.pk1".format(given_id, api_key))):
         return {'error': 'Model does not exist; create one before trying again'}, REQUEST_CONFLICT
 
     model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])

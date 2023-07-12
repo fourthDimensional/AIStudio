@@ -1,8 +1,8 @@
 from flask import Flask
 from flask_cors import CORS
-from routes.helpers import utils
 
 from routes.data import data_views
+from routes.helpers import utils
 from routes.layers import layers
 from routes.model_basic import model_basic
 
@@ -29,7 +29,6 @@ PAGE_NOT_FOUND = 404
 REQUEST_CONFLICT = 409
 
 REQUEST_NOT_IMPLEMENTED = 501
-
 
 app.register_blueprint(model_basic)
 app.register_blueprint(layers)

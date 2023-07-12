@@ -1,8 +1,9 @@
-import pickle
-import os
-import re
-import pandas as pd
 import logging
+import os
+import pickle
+import re
+
+import pandas as pd
 
 logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d [%(filename)s])',
                     datefmt='%I:%M:%S %p',

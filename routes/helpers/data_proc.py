@@ -1,7 +1,4 @@
-import os
-from routes.helpers import utils
 import logging
-import pandas as pd
 
 logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d [%(filename)s])',
                     datefmt='%I:%M:%S %p',
@@ -27,17 +24,17 @@ class Column_Deletion(Data_Modification):
         return self.column_name
 
 
-class Preprocessor_Layer:
+class Layer:
     def __init__(self, layer_id):
         self.layer_id = layer_id
-        self.type = ""  # Numerical, Text, Categorical
+        self.type: str = None
 
     def create_instanced_layer(self):
         raise NotImplementedError
 
 
 # TODO add text vectorization
-class Normalization_Layer(Preprocessor_Layer):
+class Normalization_Layer(Layer):
     def __init__(self, layer_id):
         super().__init__(layer_id)
         self.layer_id = layer_id
@@ -47,7 +44,7 @@ class Normalization_Layer(Preprocessor_Layer):
         pass
 
 
-class Discretization_Layer(Preprocessor_Layer):
+class Discretization_Layer(Layer):
     def __init__(self, layer_id):
         super().__init__(layer_id)
         self.layer_id = layer_id
@@ -57,7 +54,7 @@ class Discretization_Layer(Preprocessor_Layer):
         pass
 
 
-class Category_Encoding_Layer(Preprocessor_Layer):
+class Category_Encoding_Layer(Layer):
     def __init__(self, layer_id):
         super().__init__(layer_id)
         self.layer_id = layer_id
@@ -67,7 +64,7 @@ class Category_Encoding_Layer(Preprocessor_Layer):
         pass
 
 
-class Hashing_Layer(Preprocessor_Layer):
+class Hashing_Layer(Layer):
     def __init__(self, layer_id):
         super().__init__(layer_id)
         self.layer_id = layer_id
@@ -77,7 +74,7 @@ class Hashing_Layer(Preprocessor_Layer):
         pass
 
 
-class String_Lookup_Layer(Preprocessor_Layer):
+class String_Lookup_Layer(Layer):
     def __init__(self, layer_id):
         super().__init__(layer_id)
         self.layer_id = layer_id
@@ -87,7 +84,7 @@ class String_Lookup_Layer(Preprocessor_Layer):
         pass
 
 
-class Integer_Lookup_Layer(Preprocessor_Layer):
+class Integer_Lookup_Layer(Layer):
     def __init__(self, layer_id):
         super().__init__(layer_id)
         self.layer_id = layer_id
@@ -95,3 +92,9 @@ class Integer_Lookup_Layer(Preprocessor_Layer):
 
     def create_instanced_layer(self):
         pass
+
+
+pointer = {'network_id': ['previous_network_output_tensor_id', 'previous_network_output_tensor_id_2']}
+
+network_hash = {'network_id': ['network_x', 'network']}
+

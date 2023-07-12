@@ -1,4 +1,5 @@
-from flask import request, Blueprint, current_app
+from flask import Blueprint, current_app, request
+
 from routes.helpers import utils
 
 layers = Blueprint('layers', __name__)
@@ -37,8 +38,15 @@ def delete_layer():
         return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
 
 
-@layers.route('/model/layers/change', methods=['PUT'])
-def change_layer():
+@layers.route('/model/layers/hyperparameter', methods=['PUT'])
+def change_layer_hyperparameter():
+    api_key = request.headers.get('API-Key')
+    if api_key not in api_keys:
+        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
+
+
+@layers.route('/model/layers/hyperparameter', methods=['GET'])
+def get_layer_hyperparameter():
     api_key = request.headers.get('API-Key')
     if api_key not in api_keys:
         return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
@@ -53,6 +61,20 @@ def get_layer():
 
 @layers.route('/model/layers/position', methods=['PUT'])
 def change_position():
+    api_key = request.headers.get('API-Key')
+    if api_key not in api_keys:
+        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
+
+
+@layers.route('/model/layers/preset', methods=['POST'])
+def create_preset_network():
+    api_key = request.headers.get('API-Key')
+    if api_key not in api_keys:
+        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
+
+
+@layers.route('/model/layers/preset/hyperparameter', methods=['PUT'])
+def change_layer_hyperparameter():
     api_key = request.headers.get('API-Key')
     if api_key not in api_keys:
         return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST

@@ -1,5 +1,7 @@
-from flask import request, Blueprint, current_app
 import os
+
+from flask import Blueprint, current_app, request
+
 from routes.helpers import data_proc, utils
 
 data_views = Blueprint('data_views', __name__)
@@ -125,3 +127,11 @@ def undo_column_deletion():
     utils.save(model, model.model_path)
 
     return {'info': 'Column Deletion removed'}, REQUEST_SUCCEEDED
+
+
+@data_views.route('/data/verification', methods=['GET'])
+def verify_data_integrity():
+    api_key = request.headers.get('API-Key')
+    if api_key not in api_keys:
+        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
+
