@@ -1,7 +1,6 @@
 import os
-import utils
 import logging
-import data_proc
+from routes.helpers import data_proc, utils
 import tensorflow as tf
 
 logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d [%(filename)s])',

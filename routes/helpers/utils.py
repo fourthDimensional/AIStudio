@@ -23,7 +23,9 @@ def load_model_from_file(given_id, api_key, upload_folder):
         return pickle.load(file)
 
 
-def convert_text_file_to_list(file_path):
+def grab_api_keys():
+    file_path = 'routes/helpers/apikeys.txt'
+
     with open(file_path, 'r') as file:
         lines = file.readlines()
         lines = [line.strip() for line in lines]
