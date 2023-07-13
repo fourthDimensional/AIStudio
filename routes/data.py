@@ -19,8 +19,6 @@ REQUEST_CONFLICT = 409
 
 REQUEST_NOT_IMPLEMENTED = 501
 
-MAX_NETWORKS_PER_PERSON = 30
-
 
 @data_views.route('/data/upload', methods=['POST'])
 def data_upload():
@@ -31,14 +29,8 @@ def data_upload():
     uploaded_file = request.files['file']
 
     given_id = request.form.get('id')
-
-    if not given_id.isdigit():
-        return {'error': 'Invalid ID type'}, BAD_REQUEST
-
-    given_id = int(given_id)
-
-    if given_id > MAX_NETWORKS_PER_PERSON:
-        return {'error': 'ID greater than max network count per person'}, BAD_REQUEST
+    if not utils.check_id(given_id):
+        return {'error': 'Invalid ID'}, BAD_REQUEST
 
     if os.path.exists(os.path.join(current_app.config['UPLOAD_FOLDER'], "dataset_{}_{}.csv".format(given_id, api_key))):
         return {'error': 'Dataset already exists; delete existing set before trying again'}, REQUEST_CONFLICT
@@ -76,7 +68,9 @@ def get_columns():
     if api_key not in api_keys:
         return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
 
-    # TODO Add id checking
+    given_id = request.form.get('id')
+    if not utils.check_id(given_id):
+        return {'error': 'Invalid ID'}, BAD_REQUEST
 
     given_id = request.form.get('id')
 
@@ -94,7 +88,9 @@ def add_column_deletion():
     given_id = request.form.get('id')
     given_column = request.form.get('column')
 
-    # TODO Add id checking
+    given_id = request.form.get('id')
+    if not utils.check_id(given_id):
+        return {'error': 'Invalid ID'}, BAD_REQUEST
 
     model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
@@ -124,7 +120,9 @@ def undo_column_deletion():
     given_id = request.form.get('id')
     given_column = request.form.get('column')
 
-    # TODO Add id checking
+    given_id = request.form.get('id')
+    if not utils.check_id(given_id):
+        return {'error': 'Invalid ID'}, BAD_REQUEST
 
     model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
