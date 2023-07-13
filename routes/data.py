@@ -19,6 +19,8 @@ REQUEST_CONFLICT = 409
 
 REQUEST_NOT_IMPLEMENTED = 501
 
+MAX_NETWORKS_PER_PERSON = 30
+
 
 @data_views.route('/data/upload', methods=['POST'])
 def data_upload():
@@ -28,12 +30,15 @@ def data_upload():
 
     uploaded_file = request.files['file']
 
-    # TODO verify safe file ID
-
     given_id = request.form.get('id')
 
-    if given_id is None:
-        return {'error': 'No Dataset ID provided'}, BAD_REQUEST
+    if not given_id.isdigit():
+        return {'error': 'Invalid ID type'}, BAD_REQUEST
+
+    given_id = int(given_id)
+
+    if given_id > MAX_NETWORKS_PER_PERSON:
+        return {'error': 'ID greater than max network count per person'}, BAD_REQUEST
 
     if os.path.exists(os.path.join(current_app.config['UPLOAD_FOLDER'], "dataset_{}_{}.csv".format(given_id, api_key))):
         return {'error': 'Dataset already exists; delete existing set before trying again'}, REQUEST_CONFLICT
@@ -106,6 +111,10 @@ def add_column_deletion():
     return {'info': 'Column Deletion added'}, REQUEST_CREATED
 
 
+# TODO Revamp data manipulation and redo these two functions. Make sure you do it in a separate branch once
+#  everything else is finished.
+
+
 @data_views.route('/data/columns/', methods=['POST'])
 def undo_column_deletion():
     api_key = request.headers.get('API-Key')
@@ -134,4 +143,3 @@ def verify_data_integrity():
     api_key = request.headers.get('API-Key')
     if api_key not in api_keys:
         return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
-
