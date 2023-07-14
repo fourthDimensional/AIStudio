@@ -79,6 +79,7 @@ class Model:
 
         return inputs
 
+    # TODO Revamp data modification system after the general functions are implemented
     def process_columns(self, process_modifications):
         dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
 
