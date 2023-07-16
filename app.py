@@ -4,7 +4,7 @@ from flask_cors import CORS
 from routes.data import data_views
 from routes.helpers import utils
 from routes.layers import layers
-from routes.model_basic import model_basic
+from routes.basic import model_basic
 
 # instantiate the app
 app = Flask(__name__)

@@ -3,7 +3,7 @@ import os
 
 import tensorflow as tf
 
-from routes.helpers import data_proc, utils
+from routes.helpers import data_proc, utils, layers
 
 logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d [%(filename)s])',
                     datefmt='%I:%M:%S %p',
