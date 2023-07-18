@@ -3,7 +3,7 @@ import os
 
 import tensorflow as tf
 
-from routes.helpers import data_proc, utils
+from routes.helpers import data_proc, utils, layers
 
 logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d [%(filename)s])',
                     datefmt='%I:%M:%S %p',
@@ -45,13 +45,11 @@ class Model:
 
         self.network_count = 0
         self.data_modifications = []
-        self.networks = []
+        self.layers = []
 
         self.features = None
         self.labels = None
         self.column_hash = {}
-
-        self.preprocessing_layers = []
 
     def train(self):
         dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
@@ -111,8 +109,8 @@ class Model:
                 return True
         return
 
-    def data_preprocessing_layer_exists(self, class_input, layer_id):
-        for layer in self.preprocessing_layers:
+    def layer_exists(self, class_input, layer_id):
+        for layer in self.layers:
             if isinstance(layer, class_input) and str(layer) == layer_id:
                 return True
         return
