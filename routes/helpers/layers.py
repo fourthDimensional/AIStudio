@@ -13,12 +13,6 @@ class Layer:
     def create_instanced_layer(self):
         pass
 
-    def list_tensor_split_map(self):
-        pass
-
-    def list_tensor_input_map(self):
-        pass
-
     def list_hyperparameters(self):
         pass
 
@@ -38,12 +32,6 @@ class Input(Layer):
 
     def create_instanced_layer(self):
         return tf.keras.Input(shape=self.input_shape, dtype=self.input_type)
-
-    def list_tensor_split_map(self):
-        pass
-
-    def list_tensor_input_map(self):
-        pass
 
     def list_hyperparameters(self):
         pass
