@@ -25,10 +25,15 @@ def create_layer():
         return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
 
     given_id = request.form.get('id')
+    layer_type = request.form.get('type')  # TODO check for valid layer type
 
-    # TODO Add id checking
+    given_id = request.form.get('id')
+    if not utils.check_id(given_id):
+        return {'error': 'Invalid ID'}, BAD_REQUEST
 
     model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
+
+    model.add_layer(layer_type=str(layer_type))
 
 
 @layers.route('/model/layers/delete', methods=['DELETE'])
@@ -74,7 +79,7 @@ def create_preset_network():
 
 
 @layers.route('/model/layers/preset/hyperparameter', methods=['PUT'])
-def change_layer_hyperparameter():
+def change_preset_hyperparameter():
     api_key = request.headers.get('API-Key')
     if api_key not in api_keys:
         return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST

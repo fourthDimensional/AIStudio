@@ -92,6 +92,7 @@ class Model:
             self.column_hash[x] = columns[x]
 
         logging.info(self.column_hash)
+        logging.info(self.data_modifications)
 
         return columns
 
@@ -115,8 +116,31 @@ class Model:
                 return True
         return
 
-    def add_layer(self, network_type):
-        pass
+    def pop_training_column(self, column_name):
+        self.data_modifications.append(data_proc.Training_Column_Pop(column_name))
+
+    def add_layer(self, layer_type):
+        if layer_type == "input":
+            self.layers.append([])
+
+            dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
+
+            logging.info(self.data_modifications)
+            for each in self.data_modifications:
+                dataframe_csv = each.process(dataframe_csv)
+
+            inputs = {}
+
+            for name, column in dataframe_csv.items():
+                dtype = column.dtype
+                if dtype == object:
+                    dtype = tf.string
+                else:
+                    dtype = tf.float32
+
+                inputs[name] = tf.keras.Input(shape=(1,), name=name, dtype=dtype)
+
+            logging.info(inputs)
 
     def remove_layer(self, layer_id):
         pass
