@@ -35,6 +35,8 @@ def create_layer():
 
     model.add_layer(layer_type=str(layer_type))
 
+    return {'info': 'Layer added'}, REQUEST_CREATED
+
 
 @layers.route('/model/layers/delete', methods=['DELETE'])
 def delete_layer():

@@ -1,6 +1,6 @@
 import logging
 import os
-
+import numpy as np
 import tensorflow as tf
 
 from routes.helpers import data_proc, utils, layers
@@ -116,31 +116,25 @@ class Model:
                 return True
         return
 
-    def pop_training_column(self, column_name):
-        self.data_modifications.append(data_proc.Training_Column_Pop(column_name))
+    # TODO Implement undo for this
+    def specify_feature(self, column_name):
+        self.data_modifications.append(data_proc.Specified_Feature(column_name))
 
     def add_layer(self, layer_type):
         if layer_type == "input":
-            self.layers.append([])
+            self.layers.insert(0, [])
 
-            dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
+            # TODO Put this code in the training/layer instance implementation
+            # dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
+            # logging.info(self.data_modifications)
+            # for each in self.data_modifications:
+            #     dataframe_csv = each.process(dataframe_csv)
 
-            logging.info(self.data_modifications)
-            for each in self.data_modifications:
-                dataframe_csv = each.process(dataframe_csv)
+            layer = layers.Input(layer_id=0)
 
-            inputs = {}
+            self.layers[0].append(layer)
 
-            for name, column in dataframe_csv.items():
-                dtype = column.dtype
-                if dtype == object:
-                    dtype = tf.string
-                else:
-                    dtype = tf.float32
-
-                inputs[name] = tf.keras.Input(shape=(1,), name=name, dtype=dtype)
-
-            logging.info(inputs)
+            logging.info(self.layers)
 
     def remove_layer(self, layer_id):
         pass

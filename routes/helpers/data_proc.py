@@ -25,7 +25,7 @@ class Column_Deletion(Data_Modification):
         return self.column_name
 
 
-class Training_Column_Pop(Data_Modification):
+class Specified_Feature(Data_Modification):
     def __init__(self, column_name):
         self.column_name = column_name
 
