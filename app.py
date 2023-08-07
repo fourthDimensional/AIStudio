@@ -22,3 +22,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.register_blueprint(model_basic)
 app.register_blueprint(layers)
 app.register_blueprint(data_views)
+
+
+def main():
+    app.run(port=5000)

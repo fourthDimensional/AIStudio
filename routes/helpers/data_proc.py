@@ -5,7 +5,6 @@ logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(li
                     level=logging.DEBUG)
 
 
-# TODO add abstract base class
 class Data_Modification:
     def process(self, dataframe):
         raise NotImplementedError

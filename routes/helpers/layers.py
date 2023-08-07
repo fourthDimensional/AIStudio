@@ -67,6 +67,7 @@ class Normalization(Layer):
         super().__init__(layer_id, order, input_size)
 
         self.axis = axis
+        self.
 
     def create_instanced_layer(self, previous_layer, dataframe_csv=None):
         return tf.keras.layers.Normalization()
