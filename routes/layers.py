@@ -20,7 +20,7 @@ REQUEST_CONFLICT = 409
 REQUEST_NOT_IMPLEMENTED = 501
 
 
-@layers.route('/model/layers/create', methods=['POST'])
+@layers.route('/model/layers/create', methods=['POST'])  # TODO Change to put?
 def create_layer():
     api_key = request.headers.get('API-Key')
     if api_key not in api_keys:
@@ -30,11 +30,6 @@ def create_layer():
     layer_type = request.form.get('type')  # TODO check for valid layer type and class
     column = request.form.get('column')
     position = request.form.get('position')
-
-    if layer_type != "input":
-        given_layer_id = request.form.get('layer_id')
-    else:
-        given_layer_id = 0
 
     if not utils.check_id(given_id):
         return {'error': 'Invalid ID'}, BAD_REQUEST
@@ -48,6 +43,7 @@ def create_layer():
     utils.save(model, model_path)
 
     return {'info': 'Layer added'}, REQUEST_CREATED
+
 
 # TODO Add layer adding by adding to the previous layer instead of specifying a position and vertical
 
@@ -74,6 +70,11 @@ def delete_layer():
     utils.save(model, model_path)
 
     return {'info': 'Layer removed'}, REQUEST_CREATED
+
+
+@layers.route('/model/layers/verify', methods=['GET'])
+def verify_layers():
+    pass
 
 
 @layers.route('/model/layers/hyperparameter', methods=['PUT'])

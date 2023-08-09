@@ -64,13 +64,13 @@ class Input(Layer):
 
 
 class Normalization(Layer):
-    def __init__(self, axis):
+    def __init__(self):
         super().__init__()
 
-        self.axis = axis
+        self.axis = 1
 
     def create_instanced_layer(self, previous_layer, dataframe_csv=None):
-        return tf.keras.layers.Normalization()
+        return tf.keras.layers.Normalization()(previous_layer)
 
     def list_hyperparameters(self):
         pass

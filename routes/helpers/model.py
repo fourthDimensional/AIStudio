@@ -126,6 +126,8 @@ class Model:
         match layer_type:
             case "input":
                 self.layers[vertical][position] = layers.Input()
+            case "normalization":
+                self.layers[vertical][position] = layers.Normalization()
 
         logging.info(self.layers)
         return True
