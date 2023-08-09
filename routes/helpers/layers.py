@@ -64,8 +64,8 @@ class Input(Layer):
 
 
 class Normalization(Layer):
-    def __init__(self, axis, input_size=0):
-        super().__init__(input_size)
+    def __init__(self, axis):
+        super().__init__()
 
         self.axis = axis
 

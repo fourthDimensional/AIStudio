@@ -118,7 +118,7 @@ class Model:
 
     def add_layer(self, layer_type, vertical, position):
         self.layers.extend([[] for _ in range(0, vertical)])
-        self.layers[vertical].extend([[] for _ in range(0, position)])
+        self.layers[vertical].extend([None for _ in range(0, position + 1)])
 
         if self.layers[vertical][position]:
             return False  # TODO Error handling here instead?
@@ -127,10 +127,19 @@ class Model:
             case "input":
                 self.layers[vertical][position] = layers.Input()
 
+        logging.info(self.layers)
         return True
 
-    def remove_layer(self, layer_id):
-        pass
+    def remove_layer(self, vertical, position):
+        logging.info(self.layers)
+        try:
+            logging.info(self.layers[vertical])
+            logging.info(self.layers[vertical][position])
+            self.layers[vertical].pop(position)
+        except IndexError as e:
+            logging.info(e)
+            return False
+        return True
 
     def verify_layers(self):
         pass
