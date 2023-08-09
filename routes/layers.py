@@ -1,3 +1,5 @@
+import os
+
 from flask import Blueprint, current_app, request
 
 from routes.helpers import utils
@@ -25,17 +27,29 @@ def create_layer():
         return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
 
     given_id = request.form.get('id')
-    layer_type = request.form.get('type')  # TODO check for valid layer type
+    layer_type = request.form.get('type')  # TODO check for valid layer type and class
+    column = request.form.get('column')
+    position = request.form.get('position')
 
-    given_id = request.form.get('id')
+    if layer_type != "input":
+        given_layer_id = request.form.get('layer_id')
+    else:
+        given_layer_id = 0
+
     if not utils.check_id(given_id):
         return {'error': 'Invalid ID'}, BAD_REQUEST
 
     model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
+    model_path = os.path.join(current_app.config['UPLOAD_FOLDER'], "model_{}_{}.pk1".format(given_id, api_key))
 
-    model.add_layer(layer_type=str(layer_type))
+    if not model.add_layer(layer_type, int(column), int(position)):
+        return {'error': 'Layer already exists in that position'}, BAD_REQUEST
+
+    utils.save(model, model_path)
 
     return {'info': 'Layer added'}, REQUEST_CREATED
+
+# TODO Add layer adding by adding to the previous layer instead of specifying a position and vertical
 
 
 @layers.route('/model/layers/delete', methods=['DELETE'])

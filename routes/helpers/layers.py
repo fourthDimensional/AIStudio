@@ -3,12 +3,11 @@ from abc import ABC, abstractmethod
 
 
 class Layer(ABC):
-    def __init__(self, layer_id, order=0, input_size=0):
-        self.layer_id = layer_id
-        self.order = order
-        self.input_size = input_size
-
-        self.layer_map = {}
+    def __init__(self):
+        self.input_size = []
+        self.subsplit = []  # [] or [5, 5]
+        self.next_vertical = []  # [] or [3, -1]
+        self.offset = []  # [] or [1, 0]
 
     @abstractmethod
     def create_instanced_layer(self, previous_layer, dataframe_csv=None):
@@ -32,11 +31,13 @@ class Layer(ABC):
 
 
 class Input(Layer):
-    def __init__(self, layer_id, order=0, input_size=0):
-        super().__init__(layer_id, order, input_size)
+    def __init__(self):
+        super().__init__()
 
     def create_instanced_layer(self, dataframe_csv=None, previous_layer=None):
         inputs = {}
+
+        # TODO Add more complex data types
 
         for name, column in dataframe_csv.items():
             dtype = column.dtype
@@ -63,11 +64,10 @@ class Input(Layer):
 
 
 class Normalization(Layer):
-    def __init__(self, axis, layer_id, order=0, input_size=0):
-        super().__init__(layer_id, order, input_size)
+    def __init__(self, axis, input_size=0):
+        super().__init__(input_size)
 
         self.axis = axis
-        self.
 
     def create_instanced_layer(self, previous_layer, dataframe_csv=None):
         return tf.keras.layers.Normalization()

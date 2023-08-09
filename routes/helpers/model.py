@@ -45,11 +45,13 @@ class Model:
 
         self.network_count = 0
         self.data_modifications = []
-        self.layers = []
+        self.layers = [[]]
 
         self.features = None
         self.labels = None
         self.column_hash = {}
+
+        self.layer_count = 0
 
     def train(self):
         dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
@@ -110,33 +112,27 @@ class Model:
                 return True
         return
 
-    def layer_exists(self, class_input, layer_id):
-        for layer in self.layers:
-            if isinstance(layer, class_input) and str(layer) == layer_id:
-                return True
-        return
-
     # TODO Implement undo for this
     def specify_feature(self, column_name):
         self.data_modifications.append(data_proc.Specified_Feature(column_name))
 
-    def add_layer(self, layer_type):
-        if layer_type == "input":
-            self.layers.insert(0, [])
+    def add_layer(self, layer_type, vertical, position):
+        self.layers.extend([[] for _ in range(0, vertical)])
+        self.layers[vertical].extend([[] for _ in range(0, position)])
 
-            # TODO Put this code in the training/layer instance implementation
-            # dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
-            # logging.info(self.data_modifications)
-            # for each in self.data_modifications:
-            #     dataframe_csv = each.process(dataframe_csv)
+        if self.layers[vertical][position]:
+            return False  # TODO Error handling here instead?
 
-            layer = layers.Input(layer_id=0)
+        match layer_type:
+            case "input":
+                self.layers[vertical][position] = layers.Input()
 
-            self.layers[0].append(layer)
-
-            logging.info(self.layers)
+        return True
 
     def remove_layer(self, layer_id):
+        pass
+
+    def verify_layers(self):
         pass
 
     def __len__(self):
