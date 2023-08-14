@@ -5,7 +5,7 @@ logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(li
                     level=logging.DEBUG)
 
 
-class Data_Modification:
+class DataModification:
     def process(self, dataframe):
         raise NotImplementedError
 
@@ -13,7 +13,7 @@ class Data_Modification:
         raise NotImplementedError
 
 
-class Column_Deletion(Data_Modification):
+class ColumnDeletion(DataModification):
     def __init__(self, column_name):
         self.column_name = column_name
 
@@ -24,7 +24,7 @@ class Column_Deletion(Data_Modification):
         return self.column_name
 
 
-class Specified_Feature(Data_Modification):
+class SpecifiedFeature(DataModification):
     def __init__(self, column_name):
         self.column_name = column_name
 

@@ -74,7 +74,20 @@ def delete_layer():
 
 @layers.route('/model/layers/verify', methods=['GET'])
 def verify_layers():
-    pass
+    api_key = request.headers.get('API-Key')
+    if api_key not in api_keys:
+        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
+
+    given_id = request.form.get('id')
+
+    if not utils.check_id(given_id):
+        return {'error': 'Invalid ID'}, BAD_REQUEST
+
+    model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
+
+    model.verify_layers()
+
+    return {}, REQUEST_SUCCEEDED
 
 
 @layers.route('/model/layers/hyperparameter', methods=['PUT'])

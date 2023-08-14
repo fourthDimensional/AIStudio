@@ -94,7 +94,7 @@ def add_column_deletion():
 
     model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
-    if model.data_modification_exists(data_proc.Column_Deletion, given_column):
+    if model.data_modification_exists(data_proc.ColumnDeletion, given_column):
         return {'error': 'Column Deletion already added'}, REQUEST_CONFLICT
 
     if given_column not in model.process_columns(process_modifications=False):
@@ -126,7 +126,7 @@ def undo_column_deletion():
 
     model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
-    if not model.data_modification_exists(data_proc.Column_Deletion, given_column):
+    if not model.data_modification_exists(data_proc.ColumnDeletion, given_column):
         return {'error': 'Column Deletion does not exist'}, BAD_REQUEST
 
     model.add_deleted_column(given_column)

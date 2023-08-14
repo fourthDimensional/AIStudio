@@ -30,7 +30,10 @@ def create_model(file_path, name, visual_name, network_type, model_path):
 
     model = Model(name, visual_name, network_type, model_path, file_path)
 
-    model.train()
+    column_count = model.process_columns(process_modifications=True)
+    model.layers["Input"] = {}
+    for i in range(len(column_count)):
+        model.layers["Input"][i] = layers.SpecialInput()
 
     return [{'info': 'Model created successfully'}, model]
 
@@ -45,7 +48,7 @@ class Model:
 
         self.network_count = 0
         self.data_modifications = []
-        self.layers = [[]]
+        self.layers = {}
 
         self.features = None
         self.labels = None
@@ -54,33 +57,10 @@ class Model:
         self.layer_count = 0
 
     def train(self):
-        dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
-
-        if dataframe_csv is not None:
-            column_names = dataframe_csv.columns.tolist()
-            return column_names
-        else:
-            print("Failed to read the dataset.")
-
-        logging.info(self.data_modifications)
-        for each in self.data_modifications:
-            dataframe_csv = each.process(dataframe_csv)
-
-        inputs = {}
-
-        for name, column in dataframe_csv.items():
-            dtype = column.dtype
-            if dtype == object:
-                dtype = tf.string
-            else:
-                dtype = tf.float32
-
-            inputs[name] = tf.keras.Input(shape=(1,), name=name, dtype=dtype)
-
-        return inputs
+        pass
 
     # TODO Revamp data modification system after the general functions are implemented
-    def process_columns(self, process_modifications):
+    def process_columns(self, process_modifications: bool):
         dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
 
         if process_modifications:
@@ -99,11 +79,11 @@ class Model:
         return columns
 
     def delete_column(self, column_name):
-        self.data_modifications.append(data_proc.Column_Deletion(column_name))
+        self.data_modifications.append(data_proc.ColumnDeletion(column_name))
 
     def add_deleted_column(self, column_name):
         for modification in self.data_modifications:
-            if isinstance(modification, data_proc.Column_Deletion) and str(modification) == column_name:
+            if isinstance(modification, data_proc.ColumnDeletion) and str(modification) == column_name:
                 self.data_modifications.remove(modification)
 
     def data_modification_exists(self, class_input, string_repr):
@@ -113,38 +93,68 @@ class Model:
         return
 
     # TODO Implement undo for this
+    # TODO Do not allow layer or hyperparameter manipulation until this is done
     def specify_feature(self, column_name):
-        self.data_modifications.append(data_proc.Specified_Feature(column_name))
+        self.data_modifications.append(data_proc.SpecifiedFeature(column_name))
 
     def add_layer(self, layer_type, vertical, position):
-        self.layers.extend([[] for _ in range(0, vertical)])
-        self.layers[vertical].extend([None for _ in range(0, position + 1)])
-
-        if self.layers[vertical][position]:
-            return False  # TODO Error handling here instead?
+        logging.info(self.layers)
+        if vertical in self.layers:
+            if position in self.layers[vertical]:
+                return False  # TODO Error handling here instead?
+        else:
+            self.layers[vertical] = {position: None}
 
         match layer_type:
-            case "input":
-                self.layers[vertical][position] = layers.Input()
             case "normalization":
                 self.layers[vertical][position] = layers.Normalization()
 
         logging.info(self.layers)
+
         return True
 
     def remove_layer(self, vertical, position):
-        logging.info(self.layers)
         try:
-            logging.info(self.layers[vertical])
-            logging.info(self.layers[vertical][position])
             self.layers[vertical].pop(position)
-        except IndexError as e:
-            logging.info(e)
+        except IndexError:
             return False
         return True
 
     def verify_layers(self):
-        pass
+        dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
+
+        if dataframe_csv is not None:
+            column_names = dataframe_csv.columns.tolist()
+        else:
+            logging.error("Failed to read the dataset.")
+
+        for data_mod in self.data_modifications:
+            dataframe_csv = data_mod.process(dataframe_csv)
+
+        inputs = {}
+
+        for name, column in dataframe_csv.items():
+            dtype = column.dtype
+            if dtype == object:
+                dtype = tf.string
+            else:
+                dtype = tf.float32
+
+            inputs[name] = tf.keras.Input(shape=(1,), name=name, dtype=dtype)
+
+        vertical_inputs = [[] for _ in range(1, len(self.layers) - 1)]
+        for i in range(0, len(vertical_inputs)):
+            vertical_inputs[i] = [None for _ in self.layers[i]]
+
+        logging.info(vertical_inputs)
+        logging.info(self.layers)
+
+        errors = []
+        for vertical in self.layers:
+            for position in self.layers[vertical]:
+                logging.info(self.layers[vertical][position])
+                match self.layers[vertical][position]:
+                    case
 
     def __len__(self):
         pass

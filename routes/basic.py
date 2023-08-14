@@ -42,7 +42,6 @@ def create_model():
     model = md.create_model(file_path, model_name, visual_name, given_type, model_path)
     return_value = model[0]
     model = model[1]
-    print(model.train())
 
     utils.save(model, model_path)
 
@@ -93,7 +92,7 @@ def specify_model_features():
 
     given_column = request.form.get('column')
 
-    if model.data_modification_exists(data_proc.Specified_Feature, given_column):
+    if model.data_modification_exists(data_proc.SpecifiedFeature, given_column):
         return {'error': 'Column feature already added'}, REQUEST_CONFLICT
 
     if given_column not in model.process_columns(process_modifications=False):
