@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 
 class Layer(ABC):
     def __init__(self):
-        self.name = ''
+        self.name = 'default'
         self.input_size = []
         self.subsplit = []  # [] or [5, 5]
         self.next_vertical = []  # [] or [3, -1]
@@ -29,9 +29,9 @@ class Layer(ABC):
 
 class SpecialInput:
     def __init__(self):
-        self.name
-        self.next_vertical = []  # [] or [3, -1]
-        self.offset = []  # [] or [1, 0]
+        self.name = 'input'
+        self.next_vertical = 0
+        self.offset = 0
 
 
 class Normalization(Layer):

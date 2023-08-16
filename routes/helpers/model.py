@@ -30,9 +30,12 @@ def create_model(file_path, name, visual_name, network_type, model_path):
 
     model = Model(name, visual_name, network_type, model_path, file_path)
 
+    # move this shit elsewhere because there arent any modifications yet you dipshit
     column_count = model.process_columns(process_modifications=True)
     model.layers["Input"] = {}
-    for i in range(len(column_count)):
+    logging.info(len(column_count))
+    for i in range(0, len(column_count) - 1):
+        logging.info(i)
         model.layers["Input"][i] = layers.SpecialInput()
 
     return [{'info': 'Model created successfully'}, model]
@@ -142,19 +145,40 @@ class Model:
 
             inputs[name] = tf.keras.Input(shape=(1,), name=name, dtype=dtype)
 
-        vertical_inputs = [[] for _ in range(1, len(self.layers) - 1)]
-        for i in range(0, len(vertical_inputs)):
-            vertical_inputs[i] = [None for _ in self.layers[i]]
+        logging.info(inputs)
+
+        # vertical_inputs = [[] for _ in range(1, len(self.layers) - 1)]
+        # for i in range(0, len(vertical_inputs)):
+        #     vertical_inputs[i] = [None for _ in self.layers[i]]
+
+        vertical_inputs = {}
 
         logging.info(vertical_inputs)
         logging.info(self.layers)
 
+        sym_input_tensors = [inputs[key] for key in inputs]
+        logging.info(sym_input_tensors)
+
         errors = []
+        i_count = 0
         for vertical in self.layers:
             for position in self.layers[vertical]:
                 logging.info(self.layers[vertical][position])
-                match self.layers[vertical][position]:
-                    case
+                logging.info(vertical_inputs)
+                match self.layers[vertical][position].name:
+                    case 'input':
+                        vertical_offset = self.layers[vertical][position].next_vertical
+                        positional_offset = self.layers[vertical][position].offset
+
+                        if not vertical_inputs:
+                            vertical_inputs[vertical_offset] = {}
+                        if positional_offset not in vertical_inputs[vertical_offset]:
+                            vertical_inputs[vertical_offset][positional_offset] = []
+
+                        vertical_inputs[vertical_offset][positional_offset].append(sym_input_tensors[i_count])
+                        i_count += 1
+                # if self.layers[vertical][position].subsplit:
+                #     split_output = tf.split()
 
     def __len__(self):
         pass
