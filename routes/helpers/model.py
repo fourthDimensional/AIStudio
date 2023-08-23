@@ -30,8 +30,7 @@ def create_model(file_path, name, visual_name, network_type, model_path):
 
     model = Model(name, visual_name, network_type, model_path, file_path)
 
-    # move this shit elsewhere because there arent any modifications yet you dipshit
-    column_count = model.process_columns(process_modifications=True)
+    column_count = model.process_columns(process_modifications=False)
     model.layers["Input"] = {}
     logging.info(len(column_count))
     for i in range(0, len(column_count) - 1):
@@ -82,12 +81,17 @@ class Model:
         return columns
 
     def delete_column(self, column_name):
+        old_index = self.process_columns(process_modifications=True).index(column_name)
         self.data_modifications.append(data_proc.ColumnDeletion(column_name))
+
+        return old_index
 
     def add_deleted_column(self, column_name):
         for modification in self.data_modifications:
             if isinstance(modification, data_proc.ColumnDeletion) and str(modification) == column_name:
                 self.data_modifications.remove(modification)
+
+                return self.process_columns(process_modifications=True).index(column_name)
 
     def data_modification_exists(self, class_input, string_repr):
         for modification in self.data_modifications:
@@ -98,7 +102,10 @@ class Model:
     # TODO Implement undo for this
     # TODO Do not allow layer or hyperparameter manipulation until this is done
     def specify_feature(self, column_name):
+        old_index = self.process_columns(process_modifications=True).index(column_name)
         self.data_modifications.append(data_proc.SpecifiedFeature(column_name))
+
+        return old_index
 
     def add_layer(self, layer_type, vertical, position):
         logging.info(self.layers)

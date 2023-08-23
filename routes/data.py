@@ -2,7 +2,7 @@ import os
 
 from flask import Blueprint, current_app, request
 
-from routes.helpers import data_proc, utils
+from routes.helpers import data_proc, utils, layers
 
 data_views = Blueprint('data_views', __name__)
 
@@ -100,7 +100,8 @@ def add_column_deletion():
     if given_column not in model.process_columns(process_modifications=False):
         return {'error': 'Given column does not exist'}, BAD_REQUEST
 
-    model.delete_column(str(given_column))
+    old_index = model.delete_column(str(given_column))
+    del model.layers["Input"][old_index]
 
     utils.save(model, model.model_path)
 
@@ -129,7 +130,8 @@ def undo_column_deletion():
     if not model.data_modification_exists(data_proc.ColumnDeletion, given_column):
         return {'error': 'Column Deletion does not exist'}, BAD_REQUEST
 
-    model.add_deleted_column(given_column)
+    new_index = model.add_deleted_column(given_column)
+    model.layers["Input"][new_index] = layers.SpecialInput()
 
     utils.save(model, model.model_path)
 

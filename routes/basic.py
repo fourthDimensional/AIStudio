@@ -98,7 +98,9 @@ def specify_model_features():
     if given_column not in model.process_columns(process_modifications=False):
         return {'error': 'Given column does not exist'}, BAD_REQUEST
 
-    model.specify_feature(str(given_column))
+    old_index = model.specify_feature(str(given_column))
+    del model.layers["Input"][old_index]
+    
     utils.save(model, model_path)
 
     return {'info': 'Feature specified and will be a training metric'}, REQUEST_SUCCEEDED
