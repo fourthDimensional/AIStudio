@@ -130,6 +130,26 @@ class Model:
             return False
         return True
 
+    def offset_layer(self, vertical, position, new_offset, positional_offset):
+        try:
+            if isinstance(self.layers[vertical][position], layers.SpecialInput):
+                self.layers[vertical][position].offset = new_offset
+                return 1
+
+            self.layers[vertical][position].offset[positional_offset] = new_offset
+        except KeyError or IndexError:
+            return 0
+
+    def subsplit_layer(self, vertical, position, new_subsplit, positional_offset):
+        try:
+            if isinstance(self.layers[vertical][position], layers.SpecialInput):
+                self.layers[vertical][position].subsplit = new_subsplit
+                return 1
+
+            self.layers[vertical][position].offset[positional_offset] = new_subsplit
+        except KeyError:
+            return 0
+
     def verify_layers(self):
         dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
 
@@ -160,11 +180,7 @@ class Model:
 
         vertical_inputs = {}
 
-        logging.info(vertical_inputs)
-        logging.info(self.layers)
-
         sym_input_tensors = [inputs[key] for key in inputs]
-        logging.info(sym_input_tensors)
 
         errors = []
         i_count = 0
