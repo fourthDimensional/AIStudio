@@ -1,4 +1,5 @@
 import os
+import logging
 
 from flask import Blueprint, current_app, request
 
@@ -7,6 +8,10 @@ from routes.helpers import data_proc, utils, layers
 data_views = Blueprint('data_views', __name__)
 
 api_keys = utils.grab_api_keys()
+
+logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d [%(filename)s])',
+                    datefmt='%I:%M:%S %p',
+                    level=logging.DEBUG)
 
 REQUEST_SUCCEEDED = 200
 REQUEST_CREATED = 201
@@ -101,6 +106,8 @@ def add_column_deletion():
         return {'error': 'Given column does not exist'}, BAD_REQUEST
 
     old_index = model.delete_column(str(given_column))
+    logging.info(old_index)
+    logging.info(model.layers["Input"])
     del model.layers["Input"][old_index]
 
     utils.save(model, model.model_path)

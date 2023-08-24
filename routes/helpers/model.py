@@ -81,7 +81,7 @@ class Model:
         return columns
 
     def delete_column(self, column_name):
-        old_index = self.process_columns(process_modifications=True).index(column_name)
+        old_index = self.process_columns(process_modifications=False).index(column_name)
         self.data_modifications.append(data_proc.ColumnDeletion(column_name))
 
         return old_index
@@ -102,7 +102,7 @@ class Model:
     # TODO Implement undo for this
     # TODO Do not allow layer or hyperparameter manipulation until this is done
     def specify_feature(self, column_name):
-        old_index = self.process_columns(process_modifications=True).index(column_name)
+        old_index = self.process_columns(process_modifications=False).index(column_name)
         self.data_modifications.append(data_proc.SpecifiedFeature(column_name))
 
         return old_index
