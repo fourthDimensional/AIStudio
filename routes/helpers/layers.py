@@ -8,7 +8,7 @@ class Layer(ABC):
         self.input_size = []
         self.subsplit = []  # [] or [5, 5]
         self.next_vertical = []  # [] or [3, -1]
-        self.offset = []  # [] or [1, 0]
+        self.offset = []  # [] or [1, 0]z
 
     @abstractmethod
     def list_hyperparameters(self):

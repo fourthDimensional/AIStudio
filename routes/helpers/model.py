@@ -186,20 +186,32 @@ class Model:
         i_count = 0
         for vertical in self.layers:
             for position in self.layers[vertical]:
-                logging.info(self.layers[vertical][position])
                 logging.info(vertical_inputs)
-                match self.layers[vertical][position].name:
-                    case 'input':
-                        vertical_offset = self.layers[vertical][position].next_vertical
-                        positional_offset = self.layers[vertical][position].offset
 
-                        if not vertical_inputs:
-                            vertical_inputs[vertical_offset] = {}
-                        if positional_offset not in vertical_inputs[vertical_offset]:
-                            vertical_inputs[vertical_offset][positional_offset] = []
+                layer_object = self.layers[vertical][position]
+                logging.info(layer_object)
 
-                        vertical_inputs[vertical_offset][positional_offset].append(sym_input_tensors[i_count])
-                        i_count += 1
+                if layer_object.name == 'inputs':
+                    vertical_offset = layer_object.next_vertical
+                    positional_offset = layer_object.offset
+
+                    if not vertical_inputs:
+                        vertical_inputs[vertical_offset] = {}
+                    if positional_offset not in vertical_inputs[vertical_offset]:
+                        vertical_inputs[vertical_offset][positional_offset] = []
+
+                    vertical_inputs[vertical_offset][positional_offset].append(sym_input_tensors[i_count])
+                    i_count += 1
+
+                    continue
+
+                    # if not len(layer_object.offset) == len(layer_object.subsplit) == len(layer_object.next_vertical):
+                    #     errors.append({'layer_mapping_mismatch': layer_object})
+                    #
+                    # if not layer_object.offset:
+                    #     pass
+                    # TODO Change error checking to first subplit, then do comparisons after.
+
                 # if self.layers[vertical][position].subsplit:
                 #     split_output = tf.split()
 
