@@ -1,12 +1,17 @@
 import os
+import logging
 
 from flask import Blueprint, current_app, request
 
-from routes.helpers import data_proc, utils
+from routes.helpers import data_proc, utils, layers
 
 data_views = Blueprint('data_views', __name__)
 
 api_keys = utils.grab_api_keys()
+
+logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d [%(filename)s])',
+                    datefmt='%I:%M:%S %p',
+                    level=logging.DEBUG)
 
 REQUEST_SUCCEEDED = 200
 REQUEST_CREATED = 201
@@ -94,13 +99,16 @@ def add_column_deletion():
 
     model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
-    if model.data_modification_exists(data_proc.Column_Deletion, given_column):
+    if model.data_modification_exists(data_proc.ColumnDeletion, given_column):
         return {'error': 'Column Deletion already added'}, REQUEST_CONFLICT
 
     if given_column not in model.process_columns(process_modifications=False):
         return {'error': 'Given column does not exist'}, BAD_REQUEST
 
-    model.delete_column(str(given_column))
+    old_index = model.delete_column(str(given_column))
+    logging.info(old_index)
+    logging.info(model.layers["Input"])
+    del model.layers["Input"][old_index]
 
     utils.save(model, model.model_path)
 
@@ -126,10 +134,11 @@ def undo_column_deletion():
 
     model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
-    if not model.data_modification_exists(data_proc.Column_Deletion, given_column):
+    if not model.data_modification_exists(data_proc.ColumnDeletion, given_column):
         return {'error': 'Column Deletion does not exist'}, BAD_REQUEST
 
-    model.add_deleted_column(given_column)
+    new_index = model.add_deleted_column(given_column)
+    model.layers["Input"][new_index] = layers.SpecialInput()
 
     utils.save(model, model.model_path)
 

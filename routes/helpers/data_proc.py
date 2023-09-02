@@ -5,7 +5,7 @@ logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(li
                     level=logging.DEBUG)
 
 
-class Data_Modification:
+class DataModification:
     def process(self, dataframe):
         raise NotImplementedError
 
@@ -13,7 +13,7 @@ class Data_Modification:
         raise NotImplementedError
 
 
-class Column_Deletion(Data_Modification):
+class ColumnDeletion(DataModification):
     def __init__(self, column_name):
         self.column_name = column_name
 
@@ -24,7 +24,15 @@ class Column_Deletion(Data_Modification):
         return self.column_name
 
 
-pointer = {'network_id': ['previous_network_output_tensor_id', 'previous_network_output_tensor_id_2']}
+class SpecifiedFeature(DataModification):
+    def __init__(self, column_name):
+        self.column_name = column_name
 
-network_hash = {'network_id': ['network_x', 'network']}
+    def process(self, dataframe):
+        return dataframe.drop(labels=self.column_name, axis=1)
 
+    def get_column(self, dataframe):
+        return dataframe.pop(labels=self.column_name, axis=1)
+
+    def __str__(self):
+        return self.column_name
