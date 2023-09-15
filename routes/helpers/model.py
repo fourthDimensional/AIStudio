@@ -1,5 +1,7 @@
 import logging
 import os
+import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 import tensorflow as tf
 
@@ -33,7 +35,7 @@ def create_model(file_path, name, visual_name, network_type, model_path):
     column_count = model.process_columns(process_modifications=False)
     model.layers["Input"] = {}
     logging.info(len(column_count))
-    for i in range(0, len(column_count) - 1):
+    for i in range(0, len(column_count)):
         logging.info(i)
         model.layers["Input"][i] = layers.SpecialInput()
 
@@ -172,8 +174,6 @@ class Model:
 
             inputs[name] = tf.keras.Input(shape=(1,), name=name, dtype=dtype)
 
-        logging.info(inputs)
-
         # vertical_inputs = [[] for _ in range(1, len(self.layers) - 1)]
         # for i in range(0, len(vertical_inputs)):
         #     vertical_inputs[i] = [None for _ in self.layers[i]]
@@ -186,12 +186,10 @@ class Model:
         i_count = 0
         for vertical in self.layers:
             for position in self.layers[vertical]:
-                logging.info(vertical_inputs)
-
                 layer_object = self.layers[vertical][position]
                 logging.info(layer_object)
 
-                if layer_object.name == 'inputs':
+                if layer_object.name == 'input':
                     vertical_offset = layer_object.next_vertical
                     positional_offset = layer_object.offset
 
@@ -203,14 +201,73 @@ class Model:
                     vertical_inputs[vertical_offset][positional_offset].append(sym_input_tensors[i_count])
                     i_count += 1
 
+                    logging.info(vertical_inputs)
+
                     continue
 
-                    # if not len(layer_object.offset) == len(layer_object.subsplit) == len(layer_object.next_vertical):
-                    #     errors.append({'layer_mapping_mismatch': layer_object})
-                    #
-                    # if not layer_object.offset:
-                    #     pass
-                    # TODO Change error checking to first subplit, then do comparisons after.
+                if not len(layer_object.offset) == len(layer_object.subsplit) == len(layer_object.next_vertical):
+                    errors.append({'layer_mapping_mismatch': layer_object.name})
+
+                # Attempts to combine and add layers.
+                logging.info(vertical_inputs)
+                logging.info(vertical)
+                logging.info(position)
+                if len(vertical_inputs[vertical][position]) == 0:
+                    errors.append({'invalid_layer_input': layer_object.name})
+                elif len(vertical_inputs[vertical][position]) == 1:
+                    real_layer = layer_object.create_instanced_layer(vertical_inputs[vertical][position][0])
+                elif len(vertical_inputs[vertical][position]) > 1:
+                    combined_layer = tf.keras.layers.Concatenate(axis=1)(vertical_inputs[vertical][position])
+                    real_layer = layer_object.create_instanced_layer(combined_layer)
+                    logging.info(real_layer)
+                else:
+                    pass
+
+                dense_layer_2 = tf.keras.layers.Dense(10, activation="relu")(real_layer)
+                dense_layer_3 = tf.keras.layers.Dense(10, activation="relu")(dense_layer_2)
+                dense_layer = tf.keras.layers.Dense(10, activation="relu")(dense_layer_3)
+                output = tf.keras.layers.Dense(1)(dense_layer)
+                tmodel = tf.keras.Model(sym_input_tensors, output)
+                tf.keras.utils.plot_model(model=tmodel, rankdir="LR", dpi=72, show_shapes=True)
+                tmodel.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.05),
+                               loss='mean_absolute_error')
+
+                train_y = self.data_modifications[2].get_column(utils.convert_to_dataframe(self.dataset_path))
+                dataframe_new = [tf.constant(dataframe_csv[col].values) for col in dataframe_csv]
+                tmodel.fit(x=dataframe_new, y=train_y, epochs=200)
+
+                test_x = [tf.constant(dataframe_csv[col]) for col in dataframe_csv]
+                test_y = self.data_modifications[2].get_column(utils.convert_to_dataframe(self.dataset_path))
+                predictions = tmodel.predict(test_x)
+
+                # Flatten predictions and y_test for MAE calculation
+                predictions_flat = predictions.flatten()
+                y_test_flat = test_y.values.flatten()
+
+                # Calculate the Mean Absolute Error (MAE)
+                mae = np.mean(np.abs(predictions_flat - y_test_flat))
+
+                # Plot the predictions vs. true values
+                plt.figure(figsize=(12, 12))
+                sns.scatterplot(x=y_test_flat, y=predictions_flat)
+                plt.xlabel('True Values')
+                plt.ylabel('Predictions')
+                plt.title(f'MAE: {mae:.2f}')
+                plt.show()
+
+                sns.pairplot(utils.convert_to_dataframe(self.dataset_path)[self.process_columns(process_modifications=False)], diag_kind='kde')
+                plt.show()
+
+                if not layer_object.offset:  # offset empty
+                    pass
+                elif layer_object > 1:
+                    vertical_offset = layer_object.next_vertical
+                    positional_offset = layer_object.offset
+
+                    if not vertical_inputs:
+                        vertical_inputs[vertical_offset] = {}
+                    if positional_offset not in vertical_inputs[vertical_offset]:
+                        vertical_inputs[vertical_offset][positional_offset] = []
 
                 # if self.layers[vertical][position].subsplit:
                 #     split_output = tf.split()

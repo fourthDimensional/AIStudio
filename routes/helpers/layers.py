@@ -38,6 +38,7 @@ class Normalization(Layer):
     def __init__(self):
         super().__init__()
 
+        self.name = 'normalization'
         self.axis = 1
 
     def create_instanced_layer(self, previous_layer):
