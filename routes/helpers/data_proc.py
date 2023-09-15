@@ -32,7 +32,7 @@ class SpecifiedFeature(DataModification):
         return dataframe.drop(labels=self.column_name, axis=1)
 
     def get_column(self, dataframe):
-        return dataframe.pop(labels=self.column_name, axis=1)
+        return dataframe.pop(self.column_name)
 
     def __str__(self):
         return self.column_name
