@@ -1,9 +1,11 @@
 import logging
 import os
 import matplotlib.pyplot as plt
+import pandas
 import seaborn as sns
 import numpy as np
 import tensorflow as tf
+import keras_tuner
 
 from routes.helpers import data_proc, utils, layers
 
@@ -223,39 +225,67 @@ class Model:
                 else:
                     pass
 
-                dense_layer_2 = tf.keras.layers.Dense(10, activation="relu")(real_layer)
-                dense_layer_3 = tf.keras.layers.Dense(10, activation="relu")(dense_layer_2)
-                dense_layer = tf.keras.layers.Dense(10, activation="relu")(dense_layer_3)
-                output = tf.keras.layers.Dense(1)(dense_layer)
-                tmodel = tf.keras.Model(sym_input_tensors, output)
-                tf.keras.utils.plot_model(model=tmodel, rankdir="LR", dpi=72, show_shapes=True)
-                tmodel.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.05),
-                               loss='mean_absolute_error')
+                def model_builder(hp):
+                    hp_units = hp.Int('units', min_value=5, max_value=50, step=1)
+                    hp_units2 = hp.Int('units2', min_value=5, max_value=50, step=1)
+                    hp_units3 = hp.Int('units3', min_value=5, max_value=50, step=1)
+
+                    dense_layer_2 = tf.keras.layers.Dense(hp_units, activation="relu")(real_layer)
+                    dense_layer_3 = tf.keras.layers.Dense(hp_units2, activation="relu")(dense_layer_2)
+                    dense_layer = tf.keras.layers.Dense(hp_units3, activation="relu")(dense_layer_3)
+                    output = tf.keras.layers.Dense(1)(dense_layer)
+                    tmodel = tf.keras.Model(sym_input_tensors, output)
+                    # tf.keras.utils.plot_model(model=tmodel, rankdir="LR", dpi=72, show_shapes=True)
+                    hp_learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4])
+                    tmodel.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=hp_learning_rate),
+                                   loss='mean_absolute_error',
+                                   metrics=['accuracy'])
+
+                    return tmodel
+
+                tuner = keras_tuner.BayesianOptimization(model_builder,
+                                                         objective='val_loss',
+                                                         max_trials=100,
+                                                         directory='testing',
+                                                         project_name='001')
+
+                stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
 
                 train_y = self.data_modifications[2].get_column(utils.convert_to_dataframe(self.dataset_path))
                 dataframe_new = [tf.constant(dataframe_csv[col].values) for col in dataframe_csv]
-                tmodel.fit(x=dataframe_new, y=train_y, epochs=200)
+
+                tuner.search(dataframe_new, train_y, epochs=50, validation_split=0.2, callbacks=[stop_early])
+
+                # Get the optimal hyperparameters
+                best_hps = tuner.get_best_hyperparameters(num_trials=30)[0]
+
+                print(f"""
+                The hyperparameter search is complete. The optimal number of units in the first densely-connected
+                layer is {best_hps.get('units')} and the optimal learning rate for the optimizer
+                is {best_hps.get('learning_rate')}.
+                """)
+
+                tmodel = tuner.hypermodel.build(best_hps)
+                tmodel.fit(x=dataframe_new, y=train_y, epochs=200, validation_split=0.2)
 
                 test_x = [tf.constant(dataframe_csv[col]) for col in dataframe_csv]
                 test_y = self.data_modifications[2].get_column(utils.convert_to_dataframe(self.dataset_path))
                 predictions = tmodel.predict(test_x)
 
-                # Flatten predictions and y_test for MAE calculation
                 predictions_flat = predictions.flatten()
                 y_test_flat = test_y.values.flatten()
 
-                # Calculate the Mean Absolute Error (MAE)
                 mae = np.mean(np.abs(predictions_flat - y_test_flat))
 
-                # Plot the predictions vs. true values
                 plt.figure(figsize=(12, 12))
-                sns.scatterplot(x=y_test_flat, y=predictions_flat)
-                plt.xlabel('True Values')
-                plt.ylabel('Predictions')
-                plt.title(f'MAE: {mae:.2f}')
+                sns.jointplot(x='True Values', y='Predictions',
+                              data=pandas.DataFrame({'True Values': y_test_flat, 'Predictions': predictions_flat}),
+                              kind="reg", truncate=False, color='m')
                 plt.show()
 
-                sns.pairplot(utils.convert_to_dataframe(self.dataset_path)[self.process_columns(process_modifications=False)], diag_kind='kde')
+                sns.pairplot(
+                    utils.convert_to_dataframe(self.dataset_path)[self.process_columns(process_modifications=False)],
+                    diag_kind='kde')
                 plt.show()
 
                 if not layer_object.offset:  # offset empty
