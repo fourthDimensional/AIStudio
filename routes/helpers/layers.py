@@ -7,7 +7,7 @@ class Layer(ABC):
         self.name = 'default'
         self.input_size = []
         self.subsplit = []  # [] or [5, 5]
-        self.next_vertical = []  # [] or [3, -1]
+        self.next_horizontal = []  # [] or [3, -1]
         self.offset = []  # [] or [1, 0]z
 
     @abstractmethod
@@ -30,7 +30,7 @@ class Layer(ABC):
 class SpecialInput:
     def __init__(self):
         self.name = 'input'
-        self.next_vertical = 0
+        self.next_horizontal = 0
         self.offset = 0
 
 

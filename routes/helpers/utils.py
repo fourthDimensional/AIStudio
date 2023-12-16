@@ -67,3 +67,11 @@ def check_id(given_id):
         return False
 
     return True
+
+
+def find_index_of_specific_class(given_list, specific_class):
+    try:
+        index = next(i for i, obj in enumerate(given_list) if isinstance(obj, specific_class))
+        return index
+    except StopIteration:
+        return None

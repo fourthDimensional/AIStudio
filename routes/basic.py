@@ -100,7 +100,9 @@ def specify_model_features():
 
     old_index = model.specify_feature(str(given_column))
     del model.layers["Input"][old_index]
-    
+
+    model.feature_count += 1
+
     utils.save(model, model_path)
 
     return {'info': 'Feature specified and will be a training metric'}, REQUEST_SUCCEEDED
@@ -124,5 +126,5 @@ def generate_model_image():
 
     # TODO Finish this lol
 
-    return REQUEST_NOT_IMPLEMENTED
+    return {}, REQUEST_NOT_IMPLEMENTED
 

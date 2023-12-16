@@ -52,7 +52,6 @@ class Model:
         self.dataset_path = dataset_path
         self.model_path = model_path
 
-        self.network_count = 0
         self.data_modifications = []
         self.layers = {}
 
@@ -61,6 +60,10 @@ class Model:
         self.column_hash = {}
 
         self.layer_count = 0
+
+        self.tuner_type = "Bayesian"
+
+        self.feature_count = 0
 
     def train(self):
         pass
@@ -111,46 +114,46 @@ class Model:
 
         return old_index
 
-    def add_layer(self, layer_type, vertical, position):
+    def add_layer(self, layer_type, horizontal, position):
         logging.info(self.layers)
-        if vertical in self.layers:
-            if position in self.layers[vertical]:
+        if horizontal in self.layers:
+            if position in self.layers[horizontal]:
                 return False  # TODO Error handling here instead?
         else:
-            self.layers[vertical] = {position: None}
+            self.layers[horizontal] = {position: None}
 
         match layer_type:
             case "normalization":
-                self.layers[vertical][position] = layers.Normalization()
+                self.layers[horizontal][position] = layers.Normalization()
 
         logging.info(self.layers)
 
         return True
 
-    def remove_layer(self, vertical, position):
+    def remove_layer(self, horizontal, position):
         try:
-            self.layers[vertical].pop(position)
+            self.layers[horizontal].pop(position)
         except IndexError:
             return False
         return True
 
-    def offset_layer(self, vertical, position, new_offset, positional_offset):
+    def offset_layer(self, horizontal, position, new_offset, positional_offset):
         try:
-            if isinstance(self.layers[vertical][position], layers.SpecialInput):
-                self.layers[vertical][position].offset = new_offset
+            if isinstance(self.layers[horizontal][position], layers.SpecialInput):
+                self.layers[horizontal][position].offset = new_offset
                 return 1
 
-            self.layers[vertical][position].offset[positional_offset] = new_offset
+            self.layers[horizontal][position].offset[positional_offset] = new_offset
         except KeyError or IndexError:
             return 0
 
-    def subsplit_layer(self, vertical, position, new_subsplit, positional_offset):
+    def subsplit_layer(self, horizontal, position, new_subsplit, positional_offset):
         try:
-            if isinstance(self.layers[vertical][position], layers.SpecialInput):
-                self.layers[vertical][position].subsplit = new_subsplit
+            if isinstance(self.layers[horizontal][position], layers.SpecialInput):
+                self.layers[horizontal][position].subsplit = new_subsplit
                 return 1
 
-            self.layers[vertical][position].offset[positional_offset] = new_subsplit
+            self.layers[horizontal][position].offset[positional_offset] = new_subsplit
         except KeyError:
             return 0
 
@@ -180,97 +183,93 @@ class Model:
         # for i in range(0, len(vertical_inputs)):
         #     vertical_inputs[i] = [None for _ in self.layers[i]]
 
-        vertical_inputs = {}
+        horizontal_inputs = {}
 
         sym_input_tensors = [inputs[key] for key in inputs]
 
         errors = []
         i_count = 0
-        for vertical in self.layers:
-            for position in self.layers[vertical]:
-                layer_object = self.layers[vertical][position]
+        for layer_column in self.layers:
+            for position in self.layers[layer_column]:
+                layer_object = self.layers[layer_column][position]
                 logging.info(layer_object)
 
                 if layer_object.name == 'input':
-                    vertical_offset = layer_object.next_vertical
+                    horizontal_offset = layer_object.next_horizontal
                     positional_offset = layer_object.offset
 
-                    if not vertical_inputs:
-                        vertical_inputs[vertical_offset] = {}
-                    if positional_offset not in vertical_inputs[vertical_offset]:
-                        vertical_inputs[vertical_offset][positional_offset] = []
+                    if not horizontal_inputs:
+                        horizontal_inputs[horizontal_offset] = {}
+                    if positional_offset not in horizontal_inputs[horizontal_offset]:
+                        horizontal_inputs[horizontal_offset][positional_offset] = []
 
-                    vertical_inputs[vertical_offset][positional_offset].append(sym_input_tensors[i_count])
+                    horizontal_inputs[horizontal_offset][positional_offset].append(sym_input_tensors[i_count])
                     i_count += 1
 
-                    logging.info(vertical_inputs)
+                    logging.info(horizontal_inputs)
 
                     continue
 
-                if not len(layer_object.offset) == len(layer_object.subsplit) == len(layer_object.next_vertical):
+                if not len(layer_object.offset) == len(layer_object.subsplit) == len(layer_object.next_horizontal):
                     errors.append({'layer_mapping_mismatch': layer_object.name})
 
                 # Attempts to combine and add layers.
-                logging.info(vertical_inputs)
-                logging.info(vertical)
+                logging.info(horizontal_inputs)
+                logging.info(layer_column)
                 logging.info(position)
-                if len(vertical_inputs[vertical][position]) == 0:
+                if len(horizontal_inputs[layer_column][position]) == 0:
                     errors.append({'invalid_layer_input': layer_object.name})
-                elif len(vertical_inputs[vertical][position]) == 1:
-                    real_layer = layer_object.create_instanced_layer(vertical_inputs[vertical][position][0])
-                elif len(vertical_inputs[vertical][position]) > 1:
-                    combined_layer = tf.keras.layers.Concatenate(axis=1)(vertical_inputs[vertical][position])
+                elif len(horizontal_inputs[layer_column][position]) == 1:
+                    real_layer = layer_object.create_instanced_layer(horizontal_inputs[layer_column][position][0])
+                elif len(horizontal_inputs[layer_column][position]) > 1:
+                    combined_layer = tf.keras.layers.Concatenate(axis=1)(horizontal_inputs[layer_column][position])
                     real_layer = layer_object.create_instanced_layer(combined_layer)
                     logging.info(real_layer)
                 else:
                     pass
 
-                def model_builder(hp):
-                    hp_units = hp.Int('units', min_value=5, max_value=50, step=1)
-                    hp_units2 = hp.Int('units2', min_value=5, max_value=50, step=1)
-                    hp_units3 = hp.Int('units3', min_value=5, max_value=50, step=1)
+                if self.feature_count == 0:
+                    pass  # should do error
+                    feature_output = None
+                elif self.feature_count == 1:
+                    feature_index = utils.find_index_of_specific_class(self.data_modifications,
+                                                                       data_proc.SpecifiedFeature)
+                    feature_output = self.data_modifications[feature_index]
+                    feature_output = feature_output.get_column(utils.convert_to_dataframe(self.dataset_path))
 
-                    dense_layer_2 = tf.keras.layers.Dense(hp_units, activation="relu")(real_layer)
-                    dense_layer_3 = tf.keras.layers.Dense(hp_units2, activation="relu")(dense_layer_2)
-                    dense_layer = tf.keras.layers.Dense(hp_units3, activation="relu")(dense_layer_3)
-                    output = tf.keras.layers.Dense(1)(dense_layer)
+                elif self.feature_count > 1:
+                    features = [feature.get_column(utils.convert_to_dataframe(self.dataset_path))
+                                for feature in self.data_modifications
+                                if isinstance(feature, data_proc.SpecifiedFeature)]
+
+                    feature_output = pandas.concat(features, axis=1)
+
+                logging.info(feature_output)
+
+                def model_builder():
+                    dense_layer_2 = tf.keras.layers.Dense(20, activation="relu")(real_layer)
+                    dense_layer_3 = tf.keras.layers.Dense(20, activation="relu")(dense_layer_2)
+                    dense_layer = tf.keras.layers.Dense(20, activation="relu")(dense_layer_3)
+                    output = tf.keras.layers.Dense(2)(dense_layer)
                     tmodel = tf.keras.Model(sym_input_tensors, output)
                     # tf.keras.utils.plot_model(model=tmodel, rankdir="LR", dpi=72, show_shapes=True)
-                    hp_learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4])
-                    tmodel.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=hp_learning_rate),
+                    tmodel.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01),
                                    loss='mean_absolute_error',
                                    metrics=['accuracy'])
 
                     return tmodel
 
-                tuner = keras_tuner.BayesianOptimization(model_builder,
-                                                         objective='val_loss',
-                                                         max_trials=100,
-                                                         directory='testing',
-                                                         project_name='001')
-
-                stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
-
-                train_y = self.data_modifications[2].get_column(utils.convert_to_dataframe(self.dataset_path))
+                train_y = feature_output
                 dataframe_new = [tf.constant(dataframe_csv[col].values) for col in dataframe_csv]
 
-                tuner.search(dataframe_new, train_y, epochs=50, validation_split=0.2, callbacks=[stop_early])
-
-                # Get the optimal hyperparameters
-                best_hps = tuner.get_best_hyperparameters(num_trials=30)[0]
-
-                print(f"""
-                The hyperparameter search is complete. The optimal number of units in the first densely-connected
-                layer is {best_hps.get('units')} and the optimal learning rate for the optimizer
-                is {best_hps.get('learning_rate')}.
-                """)
-
-                tmodel = tuner.hypermodel.build(best_hps)
-                tmodel.fit(x=dataframe_new, y=train_y, epochs=200, validation_split=0.2)
+                tmodel = model_builder()
+                tmodel.fit(x=dataframe_new, y=train_y, epochs=20, validation_split=0.2)
 
                 test_x = [tf.constant(dataframe_csv[col]) for col in dataframe_csv]
-                test_y = self.data_modifications[2].get_column(utils.convert_to_dataframe(self.dataset_path))
+                logging.info(test_x)
+                test_y = feature_output
                 predictions = tmodel.predict(test_x)
+                logging.info(predictions)
 
                 predictions_flat = predictions.flatten()
                 y_test_flat = test_y.values.flatten()
@@ -291,13 +290,13 @@ class Model:
                 if not layer_object.offset:  # offset empty
                     pass
                 elif layer_object > 1:
-                    vertical_offset = layer_object.next_vertical
+                    horizontal_offset = layer_object.next_horizontal
                     positional_offset = layer_object.offset
 
-                    if not vertical_inputs:
-                        vertical_inputs[vertical_offset] = {}
-                    if positional_offset not in vertical_inputs[vertical_offset]:
-                        vertical_inputs[vertical_offset][positional_offset] = []
+                    if not horizontal_inputs:
+                        horizontal_inputs[horizontal_offset] = {}
+                    if positional_offset not in horizontal_inputs[horizontal_offset]:
+                        horizontal_inputs[horizontal_offset][positional_offset] = []
 
                 # if self.layers[vertical][position].subsplit:
                 #     split_output = tf.split()
