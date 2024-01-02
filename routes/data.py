@@ -11,7 +11,7 @@ api_keys = utils.grab_api_keys()
 
 logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d [%(filename)s])',
                     datefmt='%I:%M:%S %p',
-                    level=logging.DEBUG)
+                    level=logging.INFO)
 
 REQUEST_SUCCEEDED = 200
 REQUEST_CREATED = 201
