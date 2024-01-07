@@ -85,9 +85,9 @@ def verify_layers():
 
     model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
-    model.verify_layers()
+    result = model.verify_layers()
 
-    return {}, REQUEST_SUCCEEDED
+    return result, REQUEST_SUCCEEDED
 
 
 @layers.route('/model/layers/modify', methods=['PUT'])
@@ -139,8 +139,36 @@ def create_preset_network():
         return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
 
 
-@layers.route('/model/layers/preset/hyperparameter', methods=['PUT'])
-def change_preset_hyperparameter():
+@layers.route('/model/layers/point', methods=['PUT'])
+def point_layer_output():
     api_key = request.headers.get('API-Key')
     if api_key not in api_keys:
         return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
+
+    given_id = request.form.get('id')
+    next_column = int(request.form.get('next_column'))
+    next_position = int(request.form.get('next_position'))
+    column = request.form.get('column')
+    if column.isnumeric():
+        column = int(column)
+    position = int(request.form.get('position'))
+    start_range = int(request.form.get('start_tensor'))
+    end_range = int(request.form.get('end_tensor'))
+
+    if not utils.check_id(given_id):
+        return {'error': 'Invalid ID'}, BAD_REQUEST
+
+    model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
+
+    match model.point_layer(column, position, start_range, end_range, next_column, next_position):
+        case 0:
+            return {'error': 'The layer at the specified position was not found'}, BAD_REQUEST
+        case 1:
+            pass
+        case 2:
+            return {'success': 'The subsplit has been modified to the specified range'}
+
+    model_path = os.path.join(current_app.config['UPLOAD_FOLDER'], "model_{}_{}.pk1".format(given_id, api_key))
+    utils.save(model, model_path)
+
+    return {'success': 'Layer subsplit/point successfully added'}, REQUEST_SUCCEEDED

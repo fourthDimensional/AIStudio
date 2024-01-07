@@ -1,15 +1,17 @@
 import logging
 import os
 import matplotlib.pyplot as plt
+import pandas
 import seaborn as sns
 import numpy as np
 import tensorflow as tf
+import keras_tuner
 
 from routes.helpers import data_proc, utils, layers
 
 logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d [%(filename)s])',
                     datefmt='%I:%M:%S %p',
-                    level=logging.DEBUG)
+                    level=logging.INFO)
 
 
 def create_model(file_path, name, visual_name, network_type, model_path):
@@ -50,7 +52,6 @@ class Model:
         self.dataset_path = dataset_path
         self.model_path = model_path
 
-        self.network_count = 0
         self.data_modifications = []
         self.layers = {}
 
@@ -59,6 +60,10 @@ class Model:
         self.column_hash = {}
 
         self.layer_count = 0
+
+        self.tuner_type = "Bayesian"
+
+        self.feature_count = 0
 
     def train(self):
         pass
@@ -76,9 +81,6 @@ class Model:
 
         for x in range(0, len(columns)):
             self.column_hash[x] = columns[x]
-
-        logging.info(self.column_hash)
-        logging.info(self.data_modifications)
 
         return columns
 
@@ -109,48 +111,76 @@ class Model:
 
         return old_index
 
-    def add_layer(self, layer_type, vertical, position):
+    def add_layer(self, layer_type, horizontal, position):
         logging.info(self.layers)
-        if vertical in self.layers:
-            if position in self.layers[vertical]:
+        if horizontal in self.layers:
+            if position in self.layers[horizontal]:
                 return False  # TODO Error handling here instead?
         else:
-            self.layers[vertical] = {position: None}
+            self.layers[horizontal] = {position: None}
 
         match layer_type:
             case "normalization":
-                self.layers[vertical][position] = layers.Normalization()
+                self.layers[horizontal][position] = layers.Normalization()
+            case "dense":
+                self.layers[horizontal][position] = layers.Dense()
 
         logging.info(self.layers)
 
         return True
 
-    def remove_layer(self, vertical, position):
+    def remove_layer(self, horizontal, position):
         try:
-            self.layers[vertical].pop(position)
+            self.layers[horizontal].pop(position)
         except IndexError:
             return False
         return True
 
-    def offset_layer(self, vertical, position, new_offset, positional_offset):
+    # def point_layer(self, horizontal, position, new_horizontal, positional_offset):
+    #     if isinstance(self.layers[horizontal][position], layers.SpecialInput):
+    #         self.layers[horizontal][position].next_horizontal = new_horizontal
+    #         return 1
+    #
+    #     while len(self.layers[horizontal][position].next_horizontal) < positional_offset + 1:
+    #         self.layers[horizontal][position].next_horizontal.append(0)
+    #
+    #     self.layers[horizontal][position].next_horizontal[positional_offset] = new_horizontal
+    #
+    # def offset_layer(self, horizontal, position, new_offset, positional_offset):
+    #     if isinstance(self.layers[horizontal][position], layers.SpecialInput):
+    #         self.layers[horizontal][position].offset = new_offset
+    #         return 1
+    #
+    #     while len(self.layers[horizontal][position].offset) < positional_offset + 1:
+    #         self.layers[horizontal][position].offset.append(0)
+    #
+    #     self.layers[horizontal][position].offset[positional_offset] = new_offset
+    #
+    #
+    # def subsplit_layer(self, horizontal, position, new_subsplit, positional_offset):
+    #     try:
+    #         if isinstance(self.layers[horizontal][position], layers.SpecialInput):
+    #             self.layers[horizontal][position].subsplit = new_subsplit
+    #             return 1
+    #
+    #         self.layers[horizontal][position].offset[positional_offset] = new_subsplit
+    #     except KeyError:
+    #         return 0
+
+    def point_layer(self, horizontal, position, start_range, end_range, new_horizontal, positional_offset):
+        # TODO add subsplit range verification
         try:
-            if isinstance(self.layers[vertical][position], layers.SpecialInput):
-                self.layers[vertical][position].offset = new_offset
-                return 1
+            subsplit_size = end_range - start_range
 
-            self.layers[vertical][position].offset[positional_offset] = new_offset
-        except KeyError or IndexError:
-            return 0
+            layer = self.layers[horizontal][position]
 
-    def subsplit_layer(self, vertical, position, new_subsplit, positional_offset):
-        try:
-            if isinstance(self.layers[vertical][position], layers.SpecialInput):
-                self.layers[vertical][position].subsplit = new_subsplit
-                return 1
-
-            self.layers[vertical][position].offset[positional_offset] = new_subsplit
         except KeyError:
             return 0
+
+        if isinstance(self.layers[horizontal][position], layers.SpecialInput):
+            return self.layers[horizontal][position].update_layer_output(positional_offset, new_horizontal)
+
+        return self.layers[horizontal][position].update_layer_output(subsplit_size, new_horizontal, positional_offset)
 
     def verify_layers(self):
         dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
@@ -174,103 +204,142 @@ class Model:
 
             inputs[name] = tf.keras.Input(shape=(1,), name=name, dtype=dtype)
 
-        # vertical_inputs = [[] for _ in range(1, len(self.layers) - 1)]
-        # for i in range(0, len(vertical_inputs)):
-        #     vertical_inputs[i] = [None for _ in self.layers[i]]
-
-        vertical_inputs = {}
+        horizontal_inputs = {}
+        output_tensors = []
 
         sym_input_tensors = [inputs[key] for key in inputs]
 
         errors = []
         i_count = 0
-        for vertical in self.layers:
-            for position in self.layers[vertical]:
-                layer_object = self.layers[vertical][position]
-                logging.info(layer_object)
+
+        layer_count = 0
+        input_count = 0
+        for layer_column in self.layers:
+            for position in self.layers[layer_column]:
+                layer_object = self.layers[layer_column][position]
+                layer_count += 1
 
                 if layer_object.name == 'input':
-                    vertical_offset = layer_object.next_vertical
+                    input_count += 1
+
+                    horizontal_offset = layer_object.next_horizontal
                     positional_offset = layer_object.offset
 
-                    if not vertical_inputs:
-                        vertical_inputs[vertical_offset] = {}
-                    if positional_offset not in vertical_inputs[vertical_offset]:
-                        vertical_inputs[vertical_offset][positional_offset] = []
+                    logging.info(horizontal_offset)
+                    logging.info(positional_offset)
+                    if horizontal_offset not in horizontal_inputs:
+                        horizontal_inputs[horizontal_offset] = {}
+                    if positional_offset not in horizontal_inputs[horizontal_offset]:
+                        horizontal_inputs[horizontal_offset][positional_offset] = []
 
-                    vertical_inputs[vertical_offset][positional_offset].append(sym_input_tensors[i_count])
+                    feature_name = sym_input_tensors[i_count].name
+                    horizontal_inputs[horizontal_offset][positional_offset].append([sym_input_tensors[i_count], feature_name])
                     i_count += 1
 
-                    logging.info(vertical_inputs)
+                    logging.info(horizontal_inputs)
 
                     continue
 
-                if not len(layer_object.offset) == len(layer_object.subsplit) == len(layer_object.next_vertical):
-                    errors.append({'layer_mapping_mismatch': layer_object.name})
+                new_origin_layers = []
 
-                # Attempts to combine and add layers.
-                logging.info(vertical_inputs)
-                logging.info(vertical)
-                logging.info(position)
-                if len(vertical_inputs[vertical][position]) == 0:
-                    errors.append({'invalid_layer_input': layer_object.name})
-                elif len(vertical_inputs[vertical][position]) == 1:
-                    real_layer = layer_object.create_instanced_layer(vertical_inputs[vertical][position][0])
-                elif len(vertical_inputs[vertical][position]) > 1:
-                    combined_layer = tf.keras.layers.Concatenate(axis=1)(vertical_inputs[vertical][position])
-                    real_layer = layer_object.create_instanced_layer(combined_layer)
-                    logging.info(real_layer)
+                if layer_column not in horizontal_inputs:
+                    horizontal_inputs[layer_column] = {}
+
+                if position not in horizontal_inputs[layer_column]:
+                    horizontal_inputs[layer_column][position] = []
+
+                if len(horizontal_inputs[layer_column][position]) == 0:
+                    errors.append({'error_type': 'invalid_layer_input',
+                                   'layer_type': layer_object.name,
+                                   'layer_column': layer_column,
+                                   'layer_position': position,
+                                   'description': 'This layer has no inputs'})
+                elif len(horizontal_inputs[layer_column][position]) == 1:
+                    instanced_layer_input = horizontal_inputs[layer_column][position][0][0]
+                    names = horizontal_inputs[layer_column][position][0][1]
+                    logging.info(names)
+                    new_origin_layers = utils.merge_lists(new_origin_layers, names)
+                elif len(horizontal_inputs[layer_column][position]) > 1:
+                    instanced_inputs = [x[0] for x in horizontal_inputs[layer_column][position]]
+                    instanced_layer_input = tf.keras.layers.Concatenate(axis=1)(instanced_inputs)
+                    new_origin_layers = [x[1] for x in horizontal_inputs[layer_column][position]]
                 else:
                     pass
 
-                dense_layer_2 = tf.keras.layers.Dense(10, activation="relu")(real_layer)
-                dense_layer_3 = tf.keras.layers.Dense(10, activation="relu")(dense_layer_2)
-                dense_layer = tf.keras.layers.Dense(10, activation="relu")(dense_layer_3)
-                output = tf.keras.layers.Dense(1)(dense_layer)
-                tmodel = tf.keras.Model(sym_input_tensors, output)
-                tf.keras.utils.plot_model(model=tmodel, rankdir="LR", dpi=72, show_shapes=True)
-                tmodel.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.05),
-                               loss='mean_absolute_error')
+                if isinstance(layer_object, layers.Normalization):
+                    dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
 
-                train_y = self.data_modifications[2].get_column(utils.convert_to_dataframe(self.dataset_path))
-                dataframe_new = [tf.constant(dataframe_csv[col].values) for col in dataframe_csv]
-                tmodel.fit(x=dataframe_new, y=train_y, epochs=200)
+                    for each in self.data_modifications:
+                        dataframe_csv = each.process(dataframe_csv)
+                    instanced_layer = layer_object.create_instanced_layer(instanced_layer_input, dataframe_csv, new_origin_layers)
+                else:
+                    instanced_layer = layer_object.create_instanced_layer(instanced_layer_input)
 
-                test_x = [tf.constant(dataframe_csv[col]) for col in dataframe_csv]
-                test_y = self.data_modifications[2].get_column(utils.convert_to_dataframe(self.dataset_path))
-                predictions = tmodel.predict(test_x)
+                if not len(layer_object.offset) == len(layer_object.subsplit) == len(layer_object.next_horizontal):
+                    errors.append({'layer_mapping_mismatch': layer_object.name})
 
-                # Flatten predictions and y_test for MAE calculation
-                predictions_flat = predictions.flatten()
-                y_test_flat = test_y.values.flatten()
+                if len(layer_object.next_horizontal) == 0:  # can be subsplit or horizontal length too
+                    output_tensors.append(instanced_layer)
+                    continue
+                elif len(layer_object.next_horizontal) > 1:
+                    subsplits = tf.split(instanced_layer, num_or_size_splits=layer_object.subsplit, axis=1)
+                    for index in range(len(subsplits)):
+                        hori = layer_object.next_horizontal[index]
+                        posi = layer_object.offset[index]
+                        if hori not in horizontal_inputs:
+                            horizontal_inputs[hori] = {}
+                        if posi not in horizontal_inputs[hori]:
+                            horizontal_inputs[hori][posi] = []
+                        horizontal_inputs[hori][posi].append([subsplits[index], new_origin_layers])
 
-                # Calculate the Mean Absolute Error (MAE)
-                mae = np.mean(np.abs(predictions_flat - y_test_flat))
+                    continue
+                elif len(layer_object.next_horizontal) == 1:
+                    next_horizontal = layer_object.next_horizontal[0]
+                    next_positional_offset = layer_object.offset[0]
 
-                # Plot the predictions vs. true values
-                plt.figure(figsize=(12, 12))
-                sns.scatterplot(x=y_test_flat, y=predictions_flat)
-                plt.xlabel('True Values')
-                plt.ylabel('Predictions')
-                plt.title(f'MAE: {mae:.2f}')
-                plt.show()
 
-                sns.pairplot(utils.convert_to_dataframe(self.dataset_path)[self.process_columns(process_modifications=False)], diag_kind='kde')
-                plt.show()
+                if next_horizontal not in horizontal_inputs:
+                    horizontal_inputs[next_horizontal] = {}
+                if next_positional_offset not in horizontal_inputs[next_horizontal]:
+                    horizontal_inputs[next_horizontal][next_positional_offset] = []
 
-                if not layer_object.offset:  # offset empty
-                    pass
-                elif layer_object > 1:
-                    vertical_offset = layer_object.next_vertical
-                    positional_offset = layer_object.offset
+                horizontal_inputs[next_horizontal][next_positional_offset].append([instanced_layer, new_origin_layers])
 
-                    if not vertical_inputs:
-                        vertical_inputs[vertical_offset] = {}
-                    if positional_offset not in vertical_inputs[vertical_offset]:
-                        vertical_inputs[vertical_offset][positional_offset] = []
+                # Attempts to combine and add layers.
+                logging.info(horizontal_inputs)
 
-                # if self.layers[vertical][position].subsplit:
-                #     split_output = tf.split()
+        if len(output_tensors) == 0:
+            errors.append('invalid_output_layer_s')
+        elif len(output_tensors) == 1:
+            real_layer = output_tensors[0]
+        elif len(output_tensors) > 1:
+            real_layer = tf.keras.layers.Concatenate(axis=1)(output_tensors)
+
+        if self.feature_count == 0:
+            pass  # should do error
+            feature_output = None
+        elif self.feature_count == 1:
+            feature_index = utils.find_index_of_specific_class(self.data_modifications,
+                                                               data_proc.SpecifiedFeature)
+            feature_output = self.data_modifications[feature_index]
+            feature_output = feature_output.get_column(utils.convert_to_dataframe(self.dataset_path))
+
+        elif self.feature_count > 1:
+            features = [feature.get_column(utils.convert_to_dataframe(self.dataset_path))
+                        for feature in self.data_modifications
+                        if isinstance(feature, data_proc.SpecifiedFeature)]
+
+            feature_output = pandas.concat(features, axis=1)
+
+        output = tf.keras.layers.Dense(self.feature_count)(real_layer)
+        tmodel = tf.keras.Model(sym_input_tensors, output)
+        tmodel.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01),
+                       loss='mean_absolute_error',
+                       metrics=['accuracy'])
+        tf.keras.utils.plot_model(tmodel, to_file=os.path.join("static/files","model.png"), show_shapes=True, expand_nested=True,
+                                  show_layer_activations=True, show_layer_names=True, rankdir="LR")
+
+        return {'layer_count': layer_count, 'input_count': input_count, 'errors': errors}
 
     def __len__(self):
         pass

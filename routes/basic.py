@@ -1,6 +1,6 @@
 import os
 
-from flask import Blueprint, current_app, request
+from flask import Blueprint, current_app, request, send_file
 
 from routes.helpers import model as md, utils, data_proc
 
@@ -100,7 +100,9 @@ def specify_model_features():
 
     old_index = model.specify_feature(str(given_column))
     del model.layers["Input"][old_index]
-    
+
+    model.feature_count += 1
+
     utils.save(model, model_path)
 
     return {'info': 'Feature specified and will be a training metric'}, REQUEST_SUCCEEDED
@@ -122,7 +124,7 @@ def generate_model_image():
 
     model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
-    # TODO Finish this lol
+    model.verify_layers()
 
-    return REQUEST_NOT_IMPLEMENTED
+    return send_file(path_or_file=os.path.join(current_app.config['UPLOAD_FOLDER'], "model.png")), REQUEST_SUCCEEDED
 
