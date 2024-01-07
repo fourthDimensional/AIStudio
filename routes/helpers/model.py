@@ -171,24 +171,19 @@ class Model:
     #         return 0
 
     def point_layer(self, horizontal, position, start_range, end_range, new_horizontal, positional_offset):
-        # TODO make it so repeat requests can change the subsplit range.
         # TODO add subsplit range verification
         try:
             subsplit_size = end_range - start_range
 
-            # TODO Fix this
-            #
-            # if new_horizontal in self.layers[horizontal][position].next_horizontal:
-            #     if positional_offset == self.layers[horizontal][position].offset[hori_index]:
-            #         return 2
+            layer = self.layers[horizontal][position]
 
-            self.layers[horizontal][position].subsplit.append(subsplit_size)
-            self.layers[horizontal][position].offset.append(positional_offset)
-            self.layers[horizontal][position].next_horizontal.append(new_horizontal)
-
-            return 1
         except KeyError:
             return 0
+
+        if isinstance(self.layers[horizontal][position], layers.SpecialInput):
+            return self.layers[horizontal][position].update_layer_output(positional_offset, new_horizontal)
+
+        return self.layers[horizontal][position].update_layer_output(subsplit_size, new_horizontal, positional_offset)
 
     def verify_layers(self):
         dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
@@ -212,10 +207,6 @@ class Model:
 
             inputs[name] = tf.keras.Input(shape=(1,), name=name, dtype=dtype)
 
-        # vertical_inputs = [[] for _ in range(1, len(self.layers) - 1)]
-        # for i in range(0, len(vertical_inputs)):
-        #     vertical_inputs[i] = [None for _ in self.layers[i]]
-
         horizontal_inputs = {}
         output_tensors = []
 
@@ -223,16 +214,23 @@ class Model:
 
         errors = []
         i_count = 0
+
+        layer_count = 0
+        input_count = 0
         for layer_column in self.layers:
             for position in self.layers[layer_column]:
                 layer_object = self.layers[layer_column][position]
-                logging.info(layer_object)
+                layer_count += 1
 
                 if layer_object.name == 'input':
+                    input_count += 1
+
                     horizontal_offset = layer_object.next_horizontal
                     positional_offset = layer_object.offset
 
-                    if not horizontal_inputs:
+                    logging.info(horizontal_offset)
+                    logging.info(positional_offset)
+                    if horizontal_offset not in horizontal_inputs:
                         horizontal_inputs[horizontal_offset] = {}
                     if positional_offset not in horizontal_inputs[horizontal_offset]:
                         horizontal_inputs[horizontal_offset][positional_offset] = []
@@ -245,15 +243,17 @@ class Model:
                     continue
 
                 if layer_column not in horizontal_inputs:
-                    logging.info("Not in! Adding!")
                     horizontal_inputs[layer_column] = {}
 
                 if position not in horizontal_inputs[layer_column]:
-                    logging.info("Not in! Adding!")
                     horizontal_inputs[layer_column][position] = []
 
                 if len(horizontal_inputs[layer_column][position]) == 0:
-                    errors.append({'invalid_layer_input': layer_object.name})
+                    errors.append({'error_type': 'invalid_layer_input',
+                                   'layer_type': layer_object.name,
+                                   'layer_column': layer_column,
+                                   'layer_position': position,
+                                   'description': 'This layer has no inputs'})
                 elif len(horizontal_inputs[layer_column][position]) == 1:
                     instanced_layer = layer_object.create_instanced_layer(horizontal_inputs[layer_column][position][0])
                 elif len(horizontal_inputs[layer_column][position]) > 1:
@@ -263,7 +263,6 @@ class Model:
                     pass
 
                 logging.info(instanced_layer)
-
 
                 if not len(layer_object.offset) == len(layer_object.subsplit) == len(layer_object.next_horizontal):
                     errors.append({'layer_mapping_mismatch': layer_object.name})
@@ -323,62 +322,15 @@ class Model:
 
             feature_output = pandas.concat(features, axis=1)
 
-        logging.info(feature_output)
-
-        def model_builder():
-            output = tf.keras.layers.Dense(self.feature_count)(real_layer)
-            tmodel = tf.keras.Model(sym_input_tensors, output)
-            # tf.keras.utils.plot_model(model=tmodel, rankdir="LR", dpi=72, show_shapes=True)
-            tmodel.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01),
-                           loss='mean_absolute_error',
-                           metrics=['accuracy'])
-
-            return tmodel
-
-        train_y = feature_output
-        dataframe_new = [tf.constant(dataframe_csv[col].values) for col in dataframe_csv]
-
-        tmodel = model_builder()
-        tmodel.fit(x=dataframe_new, y=train_y, epochs=200, validation_split=0.2)
-
-        test_x = [tf.constant(dataframe_csv[col]) for col in dataframe_csv]
-        logging.info(test_x)
-        test_y = feature_output
-        predictions = tmodel.predict(test_x)
-        logging.info(predictions)
-
-        predictions_flat = predictions.flatten()
-        y_test_flat = test_y.values.flatten()
-
-        mae = np.mean(np.abs(predictions_flat - y_test_flat))
-
+        output = tf.keras.layers.Dense(self.feature_count)(real_layer)
+        tmodel = tf.keras.Model(sym_input_tensors, output)
+        tmodel.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01),
+                       loss='mean_absolute_error',
+                       metrics=['accuracy'])
         tf.keras.utils.plot_model(tmodel, to_file="model.png", show_shapes=True, expand_nested=True,
                                   show_layer_activations=True, show_layer_names=True, rankdir="LR")
 
-        plt.figure(figsize=(12, 12))
-        sns.jointplot(x='True Values', y='Predictions',
-                      data=pandas.DataFrame({'True Values': y_test_flat, 'Predictions': predictions_flat}),
-                      kind="reg", truncate=False, color='m')
-        plt.show()
-
-        sns.pairplot(
-            utils.convert_to_dataframe(self.dataset_path)[self.process_columns(process_modifications=False)],
-            diag_kind='kde')
-        plt.show()
-
-        if not layer_object.offset:  # offset empty
-            pass
-        elif layer_object > 1:
-            horizontal_offset = layer_object.next_horizontal
-            positional_offset = layer_object.offset
-
-            if not horizontal_inputs:
-                horizontal_inputs[horizontal_offset] = {}
-            if positional_offset not in horizontal_inputs[horizontal_offset]:
-                horizontal_inputs[horizontal_offset][positional_offset] = []
-
-                # if self.layers[vertical][position].subsplit:
-                #     split_output = tf.split()
+        return {'layer_count': layer_count, 'input_count': input_count, 'errors': errors}
 
     def __len__(self):
         pass

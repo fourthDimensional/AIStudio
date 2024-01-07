@@ -10,6 +10,21 @@ class Layer(ABC):
         self.next_horizontal = []  # [] or [3, -1]
         self.offset = []  # [] or [1, 0]
 
+    def update_layer_output(self, subsplit_size, new_horizontal, offset):
+        for i in range(len(self.next_horizontal)):
+            if offset == self.offset[i] and new_horizontal == self.next_horizontal[i]:
+                self.subsplit[i] = subsplit_size
+                self.offset[i] = offset
+                self.next_horizontal[i] = new_horizontal
+
+                return 2
+
+        self.subsplit.append(subsplit_size)
+        self.offset.append(offset)
+        self.next_horizontal.append(new_horizontal)
+
+        return 1
+
     @abstractmethod
     def list_hyperparameters(self):
         pass
@@ -32,6 +47,10 @@ class SpecialInput:
         self.name = 'input'
         self.next_horizontal = 0
         self.offset = 0
+
+    def update_layer_output(self, offset, next_horizontal):
+        self.offset = offset
+        self.next_horizontal = next_horizontal
 
 
 class Normalization(Layer):

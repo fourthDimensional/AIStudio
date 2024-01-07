@@ -85,9 +85,9 @@ def verify_layers():
 
     model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
-    model.verify_layers()
 
-    return {}, REQUEST_SUCCEEDED
+
+    return model.verify_layers(), REQUEST_SUCCEEDED
 
 
 @layers.route('/model/layers/modify', methods=['PUT'])
@@ -148,7 +148,9 @@ def point_layer_output():
     given_id = request.form.get('id')
     next_column = int(request.form.get('next_column'))
     next_position = int(request.form.get('next_position'))
-    column = int(request.form.get('column'))
+    column = request.form.get('column')
+    if column.isnumeric():
+        column = int(column)
     position = int(request.form.get('position'))
     start_range = int(request.form.get('start_tensor'))
     end_range = int(request.form.get('end_tensor'))
@@ -164,8 +166,7 @@ def point_layer_output():
         case 1:
             pass
         case 2:
-            # TODO make it so repeat requests can change the subsplit range.
-            return {'error': 'The specified subsplit to the specified location already exists.'}
+            return {'success': 'The subsplit has been modified to the specified range'}
 
     model_path = os.path.join(current_app.config['UPLOAD_FOLDER'], "model_{}_{}.pk1".format(given_id, api_key))
     utils.save(model, model_path)
