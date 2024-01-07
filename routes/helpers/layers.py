@@ -60,8 +60,11 @@ class Normalization(Layer):
         self.name = 'normalization'
         self.axis = -1
 
-    def create_instanced_layer(self, previous_layer):
-        return tf.keras.layers.Normalization(axis=self.axis)(previous_layer)
+    def create_instanced_layer(self, previous_layer, data):
+        layer = tf.keras.layers.Normalization(axis=self.axis)
+        layer.adapt(data)
+
+        return layer(previous_layer)
 
     def list_hyperparameters(self):
         pass

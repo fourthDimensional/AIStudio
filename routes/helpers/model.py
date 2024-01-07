@@ -82,9 +82,6 @@ class Model:
         for x in range(0, len(columns)):
             self.column_hash[x] = columns[x]
 
-        logging.info(self.column_hash)
-        logging.info(self.data_modifications)
-
         return columns
 
     def delete_column(self, column_name):
@@ -235,6 +232,7 @@ class Model:
                     if positional_offset not in horizontal_inputs[horizontal_offset]:
                         horizontal_inputs[horizontal_offset][positional_offset] = []
 
+                    logging.info(sym_input_tensors[i_count].name)
                     horizontal_inputs[horizontal_offset][positional_offset].append(sym_input_tensors[i_count])
                     i_count += 1
 
@@ -255,14 +253,20 @@ class Model:
                                    'layer_position': position,
                                    'description': 'This layer has no inputs'})
                 elif len(horizontal_inputs[layer_column][position]) == 1:
-                    instanced_layer = layer_object.create_instanced_layer(horizontal_inputs[layer_column][position][0])
+                    instanced_layer_input = horizontal_inputs[layer_column][position][0]
                 elif len(horizontal_inputs[layer_column][position]) > 1:
-                    combined_layer = tf.keras.layers.Concatenate(axis=1)(horizontal_inputs[layer_column][position])
-                    instanced_layer = layer_object.create_instanced_layer(combined_layer)
+                    instanced_layer_input = tf.keras.layers.Concatenate(axis=1)(horizontal_inputs[layer_column][position])
                 else:
                     pass
 
-                logging.info(instanced_layer)
+                if isinstance(layer_object, layers.Normalization):
+                    dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
+
+                    for each in self.data_modifications:
+                        dataframe_csv = each.process(dataframe_csv)
+                    instanced_layer = layer_object.create_instanced_layer(instanced_layer_input, dataframe_csv)
+                else:
+                    instanced_layer = layer_object.create_instanced_layer(instanced_layer_input)
 
                 if not len(layer_object.offset) == len(layer_object.subsplit) == len(layer_object.next_horizontal):
                     errors.append({'layer_mapping_mismatch': layer_object.name})
@@ -294,7 +298,7 @@ class Model:
                 horizontal_inputs[next_horizontal][next_positional_offset].append(instanced_layer)
 
                 # Attempts to combine and add layers.
-                logging.info(horizontal_inputs)
+                logging.info([horizontal.name for horizontal in horizontal_inputs[layer_column][position]])
                 logging.info(layer_object)
                 logging.info(layer_column)
                 logging.info(position)
