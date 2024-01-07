@@ -1,3 +1,10 @@
 testing/
 static/files/
 routes/helpers/apikeys.txt
+.idea/discord.xml
+
+*.pyc
+
+AIStudio.zip
+
+qodana.yaml
