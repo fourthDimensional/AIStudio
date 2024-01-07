@@ -85,9 +85,9 @@ def verify_layers():
 
     model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
+    result = model.verify_layers()
 
-
-    return model.verify_layers(), REQUEST_SUCCEEDED
+    return result, REQUEST_SUCCEEDED
 
 
 @layers.route('/model/layers/modify', methods=['PUT'])

@@ -232,13 +232,15 @@ class Model:
                     if positional_offset not in horizontal_inputs[horizontal_offset]:
                         horizontal_inputs[horizontal_offset][positional_offset] = []
 
-                    logging.info(sym_input_tensors[i_count].name)
-                    horizontal_inputs[horizontal_offset][positional_offset].append(sym_input_tensors[i_count])
+                    feature_name = sym_input_tensors[i_count].name
+                    horizontal_inputs[horizontal_offset][positional_offset].append([sym_input_tensors[i_count], feature_name])
                     i_count += 1
 
                     logging.info(horizontal_inputs)
 
                     continue
+
+                new_origin_layers = []
 
                 if layer_column not in horizontal_inputs:
                     horizontal_inputs[layer_column] = {}
@@ -253,9 +255,14 @@ class Model:
                                    'layer_position': position,
                                    'description': 'This layer has no inputs'})
                 elif len(horizontal_inputs[layer_column][position]) == 1:
-                    instanced_layer_input = horizontal_inputs[layer_column][position][0]
+                    instanced_layer_input = horizontal_inputs[layer_column][position][0][0]
+                    names = horizontal_inputs[layer_column][position][0][1]
+                    logging.info(names)
+                    new_origin_layers = utils.merge_lists(new_origin_layers, names)
                 elif len(horizontal_inputs[layer_column][position]) > 1:
-                    instanced_layer_input = tf.keras.layers.Concatenate(axis=1)(horizontal_inputs[layer_column][position])
+                    instanced_inputs = [x[0] for x in horizontal_inputs[layer_column][position]]
+                    instanced_layer_input = tf.keras.layers.Concatenate(axis=1)(instanced_inputs)
+                    new_origin_layers = [x[1] for x in horizontal_inputs[layer_column][position]]
                 else:
                     pass
 
@@ -264,7 +271,7 @@ class Model:
 
                     for each in self.data_modifications:
                         dataframe_csv = each.process(dataframe_csv)
-                    instanced_layer = layer_object.create_instanced_layer(instanced_layer_input, dataframe_csv)
+                    instanced_layer = layer_object.create_instanced_layer(instanced_layer_input, dataframe_csv, new_origin_layers)
                 else:
                     instanced_layer = layer_object.create_instanced_layer(instanced_layer_input)
 
@@ -274,9 +281,6 @@ class Model:
                 if len(layer_object.next_horizontal) == 0:  # can be subsplit or horizontal length too
                     output_tensors.append(instanced_layer)
                     continue
-                elif len(layer_object.next_horizontal) == 1:
-                    next_horizontal = layer_object.next_horizontal[0]
-                    next_positional_offset = layer_object.offset[0]
                 elif len(layer_object.next_horizontal) > 1:
                     subsplits = tf.split(instanced_layer, num_or_size_splits=layer_object.subsplit, axis=1)
                     for index in range(len(subsplits)):
@@ -286,22 +290,23 @@ class Model:
                             horizontal_inputs[hori] = {}
                         if posi not in horizontal_inputs[hori]:
                             horizontal_inputs[hori][posi] = []
-                        horizontal_inputs[hori][posi].append(subsplits[index])
+                        horizontal_inputs[hori][posi].append([subsplits[index], new_origin_layers])
 
                     continue
+                elif len(layer_object.next_horizontal) == 1:
+                    next_horizontal = layer_object.next_horizontal[0]
+                    next_positional_offset = layer_object.offset[0]
+
 
                 if next_horizontal not in horizontal_inputs:
                     horizontal_inputs[next_horizontal] = {}
                 if next_positional_offset not in horizontal_inputs[next_horizontal]:
                     horizontal_inputs[next_horizontal][next_positional_offset] = []
 
-                horizontal_inputs[next_horizontal][next_positional_offset].append(instanced_layer)
+                horizontal_inputs[next_horizontal][next_positional_offset].append([instanced_layer, new_origin_layers])
 
                 # Attempts to combine and add layers.
-                logging.info([horizontal.name for horizontal in horizontal_inputs[layer_column][position]])
-                logging.info(layer_object)
-                logging.info(layer_column)
-                logging.info(position)
+                logging.info(horizontal_inputs)
 
         if len(output_tensors) == 0:
             errors.append('invalid_output_layer_s')
@@ -331,7 +336,7 @@ class Model:
         tmodel.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01),
                        loss='mean_absolute_error',
                        metrics=['accuracy'])
-        tf.keras.utils.plot_model(tmodel, to_file="model.png", show_shapes=True, expand_nested=True,
+        tf.keras.utils.plot_model(tmodel, to_file=os.path.join("static/files","model.png"), show_shapes=True, expand_nested=True,
                                   show_layer_activations=True, show_layer_names=True, rankdir="LR")
 
         return {'layer_count': layer_count, 'input_count': input_count, 'errors': errors}

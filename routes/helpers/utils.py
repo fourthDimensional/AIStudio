@@ -75,3 +75,6 @@ def find_index_of_specific_class(given_list, specific_class):
         return index
     except StopIteration:
         return None
+
+def merge_lists(a, b):
+    return a + [b] if isinstance(b, str) else a + b
