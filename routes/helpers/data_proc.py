@@ -1,9 +1,7 @@
 import logging
+from routes.helpers import utils
 
-logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d [%(filename)s])',
-                    datefmt='%I:%M:%S %p',
-                    level=logging.INFO)
-
+logger = logging.getLogger(__name__)
 
 class DataModification:
     def process(self, dataframe):
@@ -15,6 +13,7 @@ class DataModification:
 
 class ColumnDeletion(DataModification):
     def __init__(self, column_name):
+        self.type = 'ColumnDeletion'
         self.column_name = column_name
 
     def process(self, dataframe):
@@ -26,6 +25,7 @@ class ColumnDeletion(DataModification):
 
 class SpecifiedFeature(DataModification):
     def __init__(self, column_name):
+        self.type = 'SpecifiedFeature'
         self.column_name = column_name
 
     def process(self, dataframe):
