@@ -2,16 +2,11 @@ import os
 import logging
 
 from flask import Blueprint, current_app, request
+from routes.helpers.auth import require_api_key
 
 from routes.helpers import data_proc, utils, layers
 
 data_views = Blueprint('data_views', __name__)
-
-api_keys = utils.grab_api_keys()
-
-logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d [%(filename)s])',
-                    datefmt='%I:%M:%S %p',
-                    level=logging.INFO)
 
 REQUEST_SUCCEEDED = 200
 REQUEST_CREATED = 201
@@ -24,13 +19,14 @@ REQUEST_CONFLICT = 409
 
 REQUEST_NOT_IMPLEMENTED = 501
 
+AUTHKEY_HEADER = 'authkey'
+
+logger = logging.getLogger(__name__)
+
 
 @data_views.route('/data/upload', methods=['POST'])
+@require_api_key
 def data_upload():
-    api_key = request.headers.get('API-Key')
-    if api_key not in api_keys:
-        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
-
     uploaded_file = request.files['file']
 
     given_id = request.form.get('id')
@@ -49,11 +45,8 @@ def data_upload():
 
 
 @data_views.route('/data/delete', methods=['DELETE'])
+@require_api_key
 def delete_data():
-    api_key = request.headers.get('API-Key')
-    if api_key not in api_keys:
-        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
-
     given_id = request.form.get('id')
     file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], "dataset_{}_{}.csv".format(given_id, api_key))
 
@@ -68,36 +61,42 @@ def delete_data():
 
 
 @data_views.route('/data/columns/', methods=['GET'])
+@require_api_key
 def get_columns():
-    api_key = request.headers.get('API-Key')
-    if api_key not in api_keys:
-        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
+    api_key = request.headers.get(AUTHKEY_HEADER)
 
     given_id = request.form.get('id')
     if not utils.check_id(given_id):
         return {'error': 'Invalid ID'}, BAD_REQUEST
 
-    given_id = request.form.get('id')
+    model, error = utils.fetch_model(api_key, given_id)
 
-    model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
+    match error:
+        case -1:
+            return {'error': 'Specified model is corrupted'}
+        case 0:
+            return {'error': 'Specified model id does not exist'}
 
-    return model.process_columns(process_modifications=True), REQUEST_SUCCEEDED
+    return {'columns': model.process_columns(process_modifications=True)}, REQUEST_SUCCEEDED
 
 
 @data_views.route('/data/columns/', methods=['DELETE'])
+@require_api_key
 def add_column_deletion():
-    api_key = request.headers.get('API-Key')
-    if api_key not in api_keys:
-        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
-
-    given_id = request.form.get('id')
     given_column = request.form.get('column')
+    api_key = request.headers.get(AUTHKEY_HEADER)
 
     given_id = request.form.get('id')
     if not utils.check_id(given_id):
         return {'error': 'Invalid ID'}, BAD_REQUEST
 
-    model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
+    model, error = utils.fetch_model(api_key, given_id)
+
+    match error:
+        case -1:
+            return {'error': 'Specified model is corrupted'}
+        case 0:
+            return {'error': 'Specified model id does not exist'}
 
     if model.data_modification_exists(data_proc.ColumnDeletion, given_column):
         return {'error': 'Column Deletion already added'}, REQUEST_CONFLICT
@@ -106,11 +105,9 @@ def add_column_deletion():
         return {'error': 'Given column does not exist'}, BAD_REQUEST
 
     old_index = model.delete_column(str(given_column))
-    logging.info(old_index)
-    logging.info(model.layers["Input"])
     del model.layers["Input"][old_index]
 
-    utils.save(model, model.model_path)
+    utils.store_model(api_key, given_id, model)
 
     return {'info': 'Column Deletion added'}, REQUEST_CREATED
 
@@ -120,19 +117,15 @@ def add_column_deletion():
 
 
 @data_views.route('/data/columns/', methods=['POST'])
+@require_api_key
 def undo_column_deletion():
-    api_key = request.headers.get('API-Key')
-    if api_key not in api_keys:
-        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
-
-    given_id = request.form.get('id')
     given_column = request.form.get('column')
 
     given_id = request.form.get('id')
     if not utils.check_id(given_id):
         return {'error': 'Invalid ID'}, BAD_REQUEST
 
-    model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
+    model = utils.fetch_model(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
     if not model.data_modification_exists(data_proc.ColumnDeletion, given_column):
         return {'error': 'Column Deletion does not exist'}, BAD_REQUEST
@@ -140,13 +133,12 @@ def undo_column_deletion():
     new_index = model.add_deleted_column(given_column)
     model.layers["Input"][new_index] = layers.SpecialInput()
 
-    utils.save(model, model.model_path)
+    utils.store_model(model, model.model_path)
 
     return {'info': 'Column Deletion removed'}, REQUEST_SUCCEEDED
 
 
 @data_views.route('/data/verification', methods=['GET'])
+@require_api_key
 def verify_data_integrity():
-    api_key = request.headers.get('API-Key')
-    if api_key not in api_keys:
-        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
+    return {}, REQUEST_NOT_IMPLEMENTED

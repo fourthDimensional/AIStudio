@@ -1,12 +1,12 @@
 import os
 
 from flask import Blueprint, current_app, request, send_file
+from routes.helpers.auth import require_api_key
 
 from routes.helpers import model as md, utils, data_proc
+import logging
 
 model_basic = Blueprint('model_basic', __name__)
-
-api_keys = utils.grab_api_keys()
 
 REQUEST_SUCCEEDED = 200
 REQUEST_CREATED = 201
@@ -19,8 +19,11 @@ REQUEST_CONFLICT = 409
 
 REQUEST_NOT_IMPLEMENTED = 501
 
+logger = logging.getLogger(__name__)
+
 
 @model_basic.route('/model/create', methods=['POST'])
+@require_api_key
 def create_model():
     api_key = request.headers.get('API-Key')
     if api_key not in api_keys:
@@ -37,13 +40,12 @@ def create_model():
     model_name = request.form.get('model_name')
     given_type = request.form.get('type')
     visual_name = request.form.get('visual_name')
-    model_path = os.path.join(current_app.config['UPLOAD_FOLDER'], "model_{}_{}.pk1".format(given_id, api_key))
 
-    model = md.create_model(file_path, model_name, visual_name, given_type, model_path)
+    model = md.create_model(file_path, model_name, visual_name, given_type)
     return_value = model[0]
     model = model[1]
 
-    utils.save(model, model_path)
+    utils.store_model(model, model_path)
 
     return return_value, REQUEST_CREATED
 
@@ -57,10 +59,6 @@ def delete_model():
 
 @model_basic.route('/model/name', methods=['GET'])
 def get_model_name():
-    api_key = request.headers.get('API-Key')
-    if api_key not in api_keys:
-        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
-
     given_id = request.form.get('id')
     if not utils.check_id(given_id):
         return {'error': 'Invalid ID'},
@@ -69,7 +67,7 @@ def get_model_name():
     if not os.path.exists(model_path):
         return {'error': 'Model does not exist; create one before trying again'}, REQUEST_CONFLICT
 
-    model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
+    model = utils.fetch_model(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
     return model.name
 
@@ -88,7 +86,7 @@ def specify_model_features():
     if not os.path.exists(model_path):
         return {'error': 'Model does not exist; create one before trying again'}, REQUEST_CONFLICT
 
-    model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
+    model = utils.fetch_model(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
     given_column = request.form.get('column')
 
@@ -103,7 +101,7 @@ def specify_model_features():
 
     model.feature_count += 1
 
-    utils.save(model, model_path)
+    utils.store_model(model, model_path)
 
     return {'info': 'Feature specified and will be a training metric'}, REQUEST_SUCCEEDED
 
@@ -122,7 +120,7 @@ def generate_model_image():
     if not os.path.exists(model_path):
         return {'error': 'Model does not exist; create one before trying again'}, REQUEST_CONFLICT
 
-    model = utils.load_model_from_file(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
+    model = utils.fetch_model(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
     model.verify_layers()
 

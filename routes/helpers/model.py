@@ -1,20 +1,25 @@
 import logging
 import os
 import matplotlib.pyplot as plt
+import numpy
 import pandas
 import seaborn as sns
 import numpy as np
 import tensorflow as tf
 import keras_tuner
 
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
+from sklearn.model_selection import train_test_split
+import sklearn
+
 from routes.helpers import data_proc, utils, layers
+import logging
 
-logging.basicConfig(format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d [%(filename)s])',
-                    datefmt='%I:%M:%S %p',
-                    level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-def create_model(file_path, name, visual_name, network_type, model_path):
+def create_model(file_path, name, visual_name, network_type):
     valid_network_types = ["regression", "classification"]
 
     # * Verifies that the inputs are supported/usable
@@ -32,25 +37,22 @@ def create_model(file_path, name, visual_name, network_type, model_path):
     elif network_type == 'classification':
         pass
 
-    model = Model(name, visual_name, network_type, model_path, file_path)
+    model = Model(name, visual_name, network_type, file_path)
 
     column_count = model.process_columns(process_modifications=False)
     model.layers["Input"] = {}
-    logging.info(len(column_count))
     for i in range(0, len(column_count)):
-        logging.info(i)
         model.layers["Input"][i] = layers.SpecialInput()
 
     return [{'info': 'Model created successfully'}, model]
 
 
 class Model:
-    def __init__(self, name, visual_name, network_type, model_path, dataset_path):
+    def __init__(self, name, visual_name, network_type, dataset_path):
         self.name = name
         self.visual_name = visual_name
         self.type = network_type
         self.dataset_path = dataset_path
-        self.model_path = model_path
 
         self.data_modifications = []
         self.layers = {}
@@ -65,15 +67,11 @@ class Model:
 
         self.feature_count = 0
 
-    def train(self):
-        pass
-
     # TODO Revamp data modification system after the general functions are implemented
     def process_columns(self, process_modifications: bool):
         dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
 
         if process_modifications:
-            logging.info(self.data_modifications)
             for each in self.data_modifications:
                 dataframe_csv = each.process(dataframe_csv)
 
@@ -112,20 +110,20 @@ class Model:
         return old_index
 
     def add_layer(self, layer_type, horizontal, position):
-        logging.info(self.layers)
         if horizontal in self.layers:
             if position in self.layers[horizontal]:
                 return False  # TODO Error handling here instead?
         else:
             self.layers[horizontal] = {position: None}
 
+        # TODO WHAT THE FUCK IS THIS
         match layer_type:
-            case "normalization":
-                self.layers[horizontal][position] = layers.Normalization()
+            case "batch_normalization":
+                self.layers[horizontal][position] = layers.BatchNormalization()
+            case "string_lookup":
+                self.layers[horizontal][position] = layers.StringLookup()
             case "dense":
                 self.layers[horizontal][position] = layers.Dense()
-
-        logging.info(self.layers)
 
         return True
 
@@ -185,6 +183,12 @@ class Model:
     def verify_layers(self):
         dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
 
+        numeric_columns = dataframe_csv.columns[dataframe_csv.apply(lambda x: x.astype(str).str
+                                                                    .contains(r'\d', na=False).all())]
+
+        dataframe_csv[numeric_columns] = dataframe_csv[numeric_columns].replace(',', '', regex=True)
+        dataframe_csv[numeric_columns] = dataframe_csv[numeric_columns].apply(pandas.to_numeric, errors='coerce')
+
         if dataframe_csv is not None:
             column_names = dataframe_csv.columns.tolist()
         else:
@@ -192,6 +196,8 @@ class Model:
 
         for data_mod in self.data_modifications:
             dataframe_csv = data_mod.process(dataframe_csv)
+
+        dataframe_csv.to_csv('test_plane.csv')
 
         inputs = {}
 
@@ -225,18 +231,15 @@ class Model:
                     horizontal_offset = layer_object.next_horizontal
                     positional_offset = layer_object.offset
 
-                    logging.info(horizontal_offset)
-                    logging.info(positional_offset)
                     if horizontal_offset not in horizontal_inputs:
                         horizontal_inputs[horizontal_offset] = {}
                     if positional_offset not in horizontal_inputs[horizontal_offset]:
                         horizontal_inputs[horizontal_offset][positional_offset] = []
 
                     feature_name = sym_input_tensors[i_count].name
-                    horizontal_inputs[horizontal_offset][positional_offset].append([sym_input_tensors[i_count], feature_name])
+                    horizontal_inputs[horizontal_offset][positional_offset].append(
+                        [sym_input_tensors[i_count], feature_name])
                     i_count += 1
-
-                    logging.info(horizontal_inputs)
 
                     continue
 
@@ -257,21 +260,29 @@ class Model:
                 elif len(horizontal_inputs[layer_column][position]) == 1:
                     instanced_layer_input = horizontal_inputs[layer_column][position][0][0]
                     names = horizontal_inputs[layer_column][position][0][1]
-                    logging.info(names)
                     new_origin_layers = utils.merge_lists(new_origin_layers, names)
                 elif len(horizontal_inputs[layer_column][position]) > 1:
                     instanced_inputs = [x[0] for x in horizontal_inputs[layer_column][position]]
-                    instanced_layer_input = tf.keras.layers.Concatenate(axis=1)(instanced_inputs)
-                    new_origin_layers = [x[1] for x in horizontal_inputs[layer_column][position]]
+                    try:
+                        instanced_layer_input = tf.keras.layers.Concatenate(axis=1)(instanced_inputs)
+                        new_origin_layers = [x[1] for x in horizontal_inputs[layer_column][position]]
+                    except TypeError:
+                        errors.append({'error_type': 'type_mismatch',
+                                       'layer_type': layer_object.name,
+                                       'layer_column': layer_column,
+                                       'layer_position': position,
+                                       'description': 'This layer has inputs of multiple types'})
+                        return {'event': 'fatal_error', 'errors': errors}
                 else:
                     pass
 
-                if isinstance(layer_object, layers.Normalization):
+                if layer_object.type == 'preprocessing':
                     dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
 
                     for each in self.data_modifications:
                         dataframe_csv = each.process(dataframe_csv)
-                    instanced_layer = layer_object.create_instanced_layer(instanced_layer_input, dataframe_csv, new_origin_layers)
+                    instanced_layer = layer_object.create_instanced_layer(instanced_layer_input, dataframe_csv,
+                                                                          new_origin_layers)
                 else:
                     instanced_layer = layer_object.create_instanced_layer(instanced_layer_input)
 
@@ -293,10 +304,9 @@ class Model:
                         horizontal_inputs[hori][posi].append([subsplits[index], new_origin_layers])
 
                     continue
-                elif len(layer_object.next_horizontal) == 1:
+                else:
                     next_horizontal = layer_object.next_horizontal[0]
                     next_positional_offset = layer_object.offset[0]
-
 
                 if next_horizontal not in horizontal_inputs:
                     horizontal_inputs[next_horizontal] = {}
@@ -304,9 +314,6 @@ class Model:
                     horizontal_inputs[next_horizontal][next_positional_offset] = []
 
                 horizontal_inputs[next_horizontal][next_positional_offset].append([instanced_layer, new_origin_layers])
-
-                # Attempts to combine and add layers.
-                logging.info(horizontal_inputs)
 
         if len(output_tensors) == 0:
             errors.append('invalid_output_layer_s')
@@ -331,13 +338,63 @@ class Model:
 
             feature_output = pandas.concat(features, axis=1)
 
-        output = tf.keras.layers.Dense(self.feature_count)(real_layer)
+        lr_schedule = tf.keras.optimizers.schedules.InverseTimeDecay(
+            0.01,
+            decay_steps=149 * 1000,
+            decay_rate=1,
+            staircase=False)
+
+        output = tf.keras.layers.Dense(self.feature_count, activation='sigmoid')(real_layer)
         tmodel = tf.keras.Model(sym_input_tensors, output)
-        tmodel.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01),
-                       loss='mean_absolute_error',
-                       metrics=['accuracy'])
-        tf.keras.utils.plot_model(tmodel, to_file=os.path.join("static/files","model.png"), show_shapes=True, expand_nested=True,
+        tmodel.compile(optimizer=tf.keras.optimizers.Adam(lr_schedule),
+                       loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+                       metrics=[tf.keras.metrics.BinaryCrossentropy()])
+        tf.keras.utils.plot_model(tmodel, to_file=os.path.join("static/files", "model.png"), show_shapes=True,
+                                  expand_nested=True,
                                   show_layer_activations=True, show_layer_names=True, rankdir="LR")
+
+        train_y = feature_output
+
+        x_train_true, x_test_true, y_train_true, y_test_true = train_test_split(dataframe_csv, train_y, test_size=.5,
+                                                                                random_state=22)
+
+        print(len(x_test_true), len(y_test_true))
+        print(len(x_train_true), len(y_train_true))
+
+        x_train_true = [tf.constant(x_train_true[col].values) for col in x_train_true]
+        x_test_true = [tf.constant(x_test_true[col]) for col in x_test_true]
+
+        tmodel.fit(x=x_train_true, y=y_train_true, epochs=50, validation_split=0.5,
+                   callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_binary_crossentropy', patience=200)])
+
+        predictions = tmodel.predict(x_test_true)
+
+        predicted = tf.squeeze(predictions)
+        predicted = np.array([1 if x >= 0.5 else 0 for x in predicted])
+        actual = np.array(y_test_true)
+        conf_mat = confusion_matrix(actual, predicted)
+        displ = ConfusionMatrixDisplay(confusion_matrix=conf_mat)
+        displ.plot()
+
+        print("test")
+        plt.show()
+
+        # predictions_flat = predictions.flatten()
+        # y_test_flat = test_y.values.flatten()
+        #
+        # tf.keras.utils.plot_model(tmodel, to_file="model.png", show_shapes=True, expand_nested=True,
+        #                           show_layer_activations=True, show_layer_names=True, rankdir="LR")
+        #
+        # plt.figure(figsize=(12, 12))
+        # sns.jointplot(x='True Values', y='Predictions',
+        #               data=pandas.DataFrame({'True Values': y_test_flat, 'Predictions': predictions_flat}),
+        #               kind="reg", truncate=False, color='m')
+        # plt.show()
+        #
+        # sns.pairplot(
+        #     utils.convert_to_dataframe(self.dataset_path)[self.process_columns(process_modifications=False)],
+        #     diag_kind='kde')
+        # plt.show()
 
         return {'layer_count': layer_count, 'input_count': input_count, 'errors': errors}
 

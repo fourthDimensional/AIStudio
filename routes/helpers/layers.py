@@ -1,6 +1,8 @@
 import tensorflow as tf
 from abc import ABC, abstractmethod
+import logging
 
+logger = logging.getLogger(__name__)
 
 class Layer(ABC):
     def __init__(self):
@@ -53,16 +55,41 @@ class SpecialInput:
         self.next_horizontal = next_horizontal
 
 
-class Normalization(Layer):
+class BatchNormalization(Layer):
     def __init__(self):
         super().__init__()
 
-        self.name = 'normalization'
+        self.name = 'batch_normalization'
+        self.type = 'default'
         self.axis = -1
 
+    def create_instanced_layer(self, previous_layer):
+        layer = tf.keras.layers.BatchNormalization(axis=self.axis)(previous_layer)
+
+        return layer
+
+    def list_hyperparameters(self):
+        pass
+
+    def modify_hyperparameters(self):
+        pass
+
+    def get_default_hyperparameter(self):
+        pass
+
+    def suggested_hyperparameter(self):
+        pass
+
+
+class StringLookup(Layer):
+    def __init__(self):
+        super().__init__()
+
+        self.name = 'stringlookup'
+        self.type = 'preprocessing'
+
     def create_instanced_layer(self, previous_layer, data, features):
-        layer = tf.keras.layers.Normalization(axis=self.axis)
-        print(features)
+        layer = tf.keras.layers.StringLookup(output_mode='one_hot')
         data = data.loc[:, features]
         layer.adapt(data)
 
@@ -86,7 +113,8 @@ class Dense(Layer):
         super().__init__()
 
         self.name = 'dense'
-        self.activation = 'relu'
+        self.type = 'normal'
+        self.activation = 'sigmoid'
         self.use_bias = True
         self.units = 6
 
