@@ -1,0 +1,4 @@
+- Remove unnessescary libraries
+- Change environment to production
+- Ensure HTTPS
+- Prevent brute force large-input information attacks

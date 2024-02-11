@@ -19,18 +19,18 @@ REQUEST_CONFLICT = 409
 
 REQUEST_NOT_IMPLEMENTED = 501
 
+AUTHKEY_HEADER = 'authkey'
+
 logger = logging.getLogger(__name__)
 
 @layers.route('/model/layers/create', methods=['POST'])  # TODO Change to put?
 @require_api_key
 def create_layer():
+    api_key = request.headers.get(AUTHKEY_HEADER)
     given_id = request.form.get('id')
     layer_type = request.form.get('type')  # TODO check for valid layer type and class
     column = request.form.get('column')
     position = request.form.get('position')
-
-    if not utils.check_id(given_id):
-        return {'error': 'Invalid ID'}, BAD_REQUEST
 
     model = utils.fetch_model(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
     model_path = os.path.join(current_app.config['UPLOAD_FOLDER'], "model_{}_{}.pk1".format(given_id, api_key))
@@ -42,6 +42,7 @@ def create_layer():
 
     return {'info': 'Layer added'}, REQUEST_CREATED
 
+# TODO add batch layer addition
 
 # TODO Add layer adding by adding to the previous layer instead of specifying a position and vertical
 
@@ -49,12 +50,10 @@ def create_layer():
 @layers.route('/model/layers/delete', methods=['DELETE'])
 @require_api_key
 def delete_layer():
+    api_key = request.headers.get(AUTHKEY_HEADER)
     given_id = request.form.get('id')
     column = request.form.get('column')
     position = request.form.get('position')
-
-    if not utils.check_id(given_id):
-        return {'error': 'Invalid ID'}, BAD_REQUEST
 
     model = utils.fetch_model(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
     model_path = os.path.join(current_app.config['UPLOAD_FOLDER'], "model_{}_{}.pk1".format(given_id, api_key))
@@ -70,10 +69,8 @@ def delete_layer():
 @layers.route('/model/layers/verify', methods=['GET'])
 @require_api_key
 def verify_layers():
+    api_key = request.headers.get(AUTHKEY_HEADER)
     given_id = request.form.get('id')
-
-    if not utils.check_id(given_id):
-        return {'error': 'Invalid ID'}, BAD_REQUEST
 
     model = utils.fetch_model(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
@@ -85,10 +82,8 @@ def verify_layers():
 @layers.route('/model/layers/modify', methods=['PUT'])
 @require_api_key
 def modify_layers():
+    api_key = request.headers.get(AUTHKEY_HEADER)
     given_id = request.form.get('id')
-
-    if not utils.check_id(given_id):
-        return {'error': 'Invalid ID'}, BAD_REQUEST
 
     model = utils.fetch_model(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 
@@ -96,48 +91,57 @@ def modify_layers():
 @layers.route('/model/layers/hyperparameter', methods=['PUT'])
 @require_api_key
 def change_layer_hyperparameter():
+    api_key = request.headers.get(AUTHKEY_HEADER)
+
     return {}, REQUEST_NOT_IMPLEMENTED
 
 
 @layers.route('/model/layers/hyperparameter', methods=['GET'])
 @require_api_key
 def get_layer_hyperparameter():
+    api_key = request.headers.get(AUTHKEY_HEADER)
+
     return {}, REQUEST_NOT_IMPLEMENTED
 
 
 @layers.route('/model/layers/', methods=['GET'])
 @require_api_key
 def get_layer():
+    api_key = request.headers.get(AUTHKEY_HEADER)
+
     return {}, REQUEST_NOT_IMPLEMENTED
 
 
 @layers.route('/model/layers/position', methods=['PUT'])
 @require_api_key
 def change_position():
+    api_key = request.headers.get(AUTHKEY_HEADER)
+
     return {}, REQUEST_NOT_IMPLEMENTED
 
 
 @layers.route('/model/layers/preset', methods=['POST'])
 @require_api_key
 def create_preset_network():
+    api_key = request.headers.get(AUTHKEY_HEADER)
+
     return {}, REQUEST_NOT_IMPLEMENTED
 
 
 @layers.route('/model/layers/point', methods=['PUT'])
 @require_api_key
 def point_layer_output():
+    api_key = request.headers.get(AUTHKEY_HEADER)
     given_id = request.form.get('id')
     next_column = int(request.form.get('next_column'))
     next_position = int(request.form.get('next_position'))
     column = request.form.get('column')
-    if column.isnumeric():
-        column = int(column)
     position = int(request.form.get('position'))
     start_range = int(request.form.get('start_tensor'))
     end_range = int(request.form.get('end_tensor'))
 
-    if not utils.check_id(given_id):
-        return {'error': 'Invalid ID'}, BAD_REQUEST
+    if column.isnumeric():
+        column = int(column)
 
     model = utils.fetch_model(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
 

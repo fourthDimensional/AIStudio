@@ -1,10 +1,10 @@
 testing/
 static/files/
-routes/helpers/apikeys.txt
 .idea/discord.xml
+.pytest_cache
+app.log
+prod_todo.txt
 
 *.pyc
+.env
 
-AIStudio.zip
-
-qodana.yaml

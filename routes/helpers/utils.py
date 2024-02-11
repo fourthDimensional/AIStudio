@@ -17,98 +17,152 @@ MODEL_PATH = '$'
 MAX_LOGS = 15
 PROFILER_DIR = (Path(__file__).resolve().parent.parent.parent / 'profiles').resolve()
 SECRET_KEY = os.getenv("HMAC_SECRET")
-FLASK_ENV = os.getenv("FLASK_ENV")
 
+# Configuration for Redis connection
+redis_host: str = 'localhost'
+redis_port: int = 6379
+redis_db: int = 0
+
+# Create a Redis connection using environment variables
 redis_client = redis.Redis(
-    host='redis-16232.c282.east-us-mz.azure.cloud.redislabs.com',
-    port=16232,
-    password='GmIvRW7nt8slcgNmm7gjaARC0rCsRA6y')
-
+    host=os.getenv('REDIS_HOST', redis_host),
+    port=int(os.getenv('REDIS_PORT', str(redis_port))),
+    password=os.getenv('REDIS_PASSWORD'),
+    decode_responses=True
+)
 
 logger = logging.getLogger(__name__)
 
 
 def check_naming_convention(string):
+    """
+    Check if a given string follows a specific naming convention.
+
+    The naming convention is all lowercase letters with underscores separating words.
+
+    :param string: The string to be checked.
+    :return: True if the string follows the convention, False otherwise.
+    """
     pattern = r'^[a-z]+(_[a-z]+)*$'
     if re.match(pattern, string):
         return True
     return False
 
 
-def get_uuid(api_key):
+def get_uuid(api_key, redis_server=redis_client):
+    """
+    Retrieve the UUID associated with a given API key from Redis.
+
+    Logs a message indicating the action of querying for the UUID.
+
+    :param api_key: The API key for which the UUID is being queried.
+    :return: The UUID associated with the provided API key.
+    """
     logging.info('QUERYing for UUID by API KEY')
-    return redis_client.json().get("api_key:{}".format(api_key), '$.uuid')[0]
+    return redis_server.json().get("api_key:{}".format(api_key), '$.uuid')[0]
 
 
 def verify_signature(data, signature, secret_key):
-    if FLASK_ENV == 'development':
+    """
+    Verify the HMAC signature of given data using the provided secret key.
+
+    If the Flask environment is development, it also cleans up old logs before returning True unconditionally.
+
+    :param data: The data for which the signature was generated.
+    :param signature: The signature to be verified.
+    :param secret_key: The secret key used to generate the signature.
+    :return: True if the signature is valid or if in development mode, otherwise False.
+    """
+    if os.getenv("FLASK_ENV") == 'development':
         cleanup_old_logs(PROFILER_DIR, MAX_LOGS)
         return True
     expected_signature = hmac.new(secret_key.encode(), data.encode(), hashlib.sha256).hexdigest().encode()
     logging.info('Verifying HMAC signature on serialized model')
+    print(data.encode())
     return hmac.compare_digest(expected_signature, signature)
 
 
-def fetch_model(api_key, model_id):
+def fetch_model(api_key, model_id, redis_server=redis_client, secret=SECRET_KEY):
+    """
+    Fetch a model from the database using the provided API key and model ID.
+
+    Logs various stages of the operation, including fetching, signature verification, and decoding of the model.
+    If the model's signature is verified, attempts to decode the serialized model.
+
+    :param api_key: The API key associated with the user.
+    :param model_id: The ID of the model to fetch.
+    :return: A tuple containing the decoded model and a status code (1 for success, -1 for failure, 0 if model does not exist).
+    """
     logging.info('Fetching model from database')
-    uuid = get_uuid(api_key)
+    uuid = get_uuid(api_key, redis_server)
 
     model_key = "model:{}:{}:data".format(uuid, model_id)
     signature_key = "model:{}:{}:signature".format(uuid, model_id)
 
-    if not redis_client.exists(model_key):
+    if not redis_server.exists(model_key):
         logging.info('Requested model does not exist')
         return None, 0
 
-    serialized_model = json.dumps(redis_client.json().get(model_key, MODEL_PATH)[0])
-    signature = redis_client.get(signature_key)
+    serialized_model = json.dumps(redis_server.json().get(model_key, MODEL_PATH)[0])
+    signature = redis_server.get(signature_key).encode()
 
-    if verify_signature(serialized_model, signature, SECRET_KEY):
+    if verify_signature(serialized_model, signature, secret):
         logging.info('Verified HMAC signature')
-        try:
-            logging.info('Attempting to decode serialized model')
-            return jsonpickle.decode(serialized_model, keys=True), 1
-        except Exception as e:
-            logging.error(f'Failed to decode serialized model at {model_key}')
-            return None, -1
+        logging.info('Decoding serialized model')
+        return jsonpickle.decode(serialized_model, keys=True), 1
     else:
         logging.warning(f'SECURITY - Serialized model at "{model_key}" has been modified')
-        return None, -1
+        return None, -2
 
 
-def store_model(api_key, model_id, model):
-    uuid = get_uuid(api_key)
+def store_model(api_key, model_id, model, redis_server=redis_client, secret=SECRET_KEY):
+    """
+    Store a model in the database with its associated API key and model ID.
+
+    Serializes the model, generates a signature for it, and then stores both the model and its signature in Redis.
+
+    :param api_key: The API key associated with the user.
+    :param model_id: The ID for the model to store.
+    :param model: The model to be stored.
+    """
+    uuid = get_uuid(api_key, redis_server)
 
     model_key = "model:{}:{}:data".format(uuid, model_id)
     signature_key = "model:{}:{}:signature".format(uuid, model_id)
     serialized_model = jsonpickle.encode(model, keys=True)
 
-    signature = hmac.new(SECRET_KEY.encode(), serialized_model.encode(), hashlib.sha256).hexdigest()
+    signature = hmac.new(secret.encode(), serialized_model.encode(), hashlib.sha256).hexdigest()
 
-    redis_client.set(signature_key, signature)
-    redis_client.json().set(model_key, MODEL_PATH, json.loads(serialized_model))
+    redis_server.set(signature_key, signature)
+    redis_server.json().set(model_key, MODEL_PATH, json.loads(serialized_model))
 
 
 def convert_to_dataframe(dataset_path):
+    """
+    Convert a dataset file to a pandas DataFrame.
+
+    Attempts to read the file using multiple encodings until successful. Drops rows with any missing values.
+
+    :param dataset_path: The path to the dataset file.
+    :return: A pandas DataFrame containing the dataset.
+    """
     dataframe_csv = None
     encodings = ["utf-8", "utf-8-sig", "iso-8859-1", "latin1", "cp1252"]
     for encoding in encodings:
-        try:
-            with open(dataset_path, 'r', encoding=encoding, errors='replace') as f:
-                dataframe_csv = pd.read_csv(f)
-                dataframe_csv.dropna(axis=0, inplace=True)
-            break
-        except Exception as e:
-            logging.error('No valid encoding when trying to convert a csv file to a pandas dataframe: {}'.format(e))
-            pass
-
-    # TODO Add error processing here and in implementation.
-
+        with open(dataset_path, 'r', encoding=encoding, errors='replace') as f:
+            dataframe_csv = pd.read_csv(f)
+            dataframe_csv.dropna(axis=0, inplace=True)
+        break
     return dataframe_csv
 
 
-# TODO Please stop making idiotic programming decisions
 def check_id(given_id):
+    """
+    Check if a given ID is a digit and does not exceed the maximum allowed networks per person.
+
+    :param given_id: The ID to be checked.
+    :return: True if the ID is valid, False otherwise.
+    """
     if not given_id.isdigit():
         return False
 
@@ -121,6 +175,13 @@ def check_id(given_id):
 
 
 def find_index_of_specific_class(given_list, specific_class):
+    """
+    Find the index of the first occurrence of a specific class type in a given list.
+
+    :param given_list: The list to search through.
+    :param specific_class: The class type to search for.
+    :return: The index of the first occurrence of the specified class in the list, or None if not found.
+    """
     try:
         index = next(i for i, obj in enumerate(given_list) if isinstance(obj, specific_class))
         return index
@@ -129,12 +190,24 @@ def find_index_of_specific_class(given_list, specific_class):
 
 
 def merge_lists(a, b):
+    """
+    Merge two lists or append an item to a list.
+
+    If 'b' is a string, it is appended to 'a' as a single item. Otherwise, 'b' is extended to 'a'.
+
+    :param a: The first list.
+    :param b: The second list or item to be merged or appended.
+    :return: The merged list.
+    """
     return a + [b] if isinstance(b, str) else a + b
 
 
 def cleanup_old_logs(profile_dir, max_logs):
     """
-    Cleanup old profiler logs, keeping at most max_logs logs.
+    Cleanup old logs in the specified directory, keeping only a set maximum number of the most recent logs.
+
+    :param profile_dir: The directory containing profiler logs.
+    :param max_logs: The maximum number of log files to keep.
     """
     # Get a list of profiler logs
     log_files = [f for f in os.listdir(profile_dir) if f.endswith('.prof')]
@@ -150,3 +223,23 @@ def cleanup_old_logs(profile_dir, max_logs):
         file_to_delete = os.path.join(profile_dir, log_files[i])
         os.remove(file_to_delete)
         logging.info(f"Deleted old profiler log: {file_to_delete}")
+
+
+def delete_model(api_key, model_id, redis_server=redis_client):
+    """
+    Delete a model from the database using the provided API key and model ID.
+
+    :param api_key: The API key associated with the user.
+    :param model_id: The ID of the model to delete.
+    :return: 1 if the model was successfully deleted, 0 if the model does not exist.
+    """
+    uuid = get_uuid(api_key, redis_server)
+
+    model_key = "model:{}:{}:data".format(uuid, model_id)
+
+    if not redis_server.exists(model_key):
+        return 0
+
+    redis_server.json().delete(model_key)
+
+    return 1

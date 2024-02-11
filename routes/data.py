@@ -28,10 +28,8 @@ logger = logging.getLogger(__name__)
 @require_api_key
 def data_upload():
     uploaded_file = request.files['file']
-
+    api_key = request.headers.get(AUTHKEY_HEADER)
     given_id = request.form.get('id')
-    if not utils.check_id(given_id):
-        return {'error': 'Invalid ID'}, BAD_REQUEST
 
     if os.path.exists(os.path.join(current_app.config['UPLOAD_FOLDER'], "dataset_{}_{}.csv".format(given_id, api_key))):
         return {'error': 'Dataset already exists; delete existing set before trying again'}, REQUEST_CONFLICT
@@ -48,10 +46,8 @@ def data_upload():
 @require_api_key
 def delete_data():
     given_id = request.form.get('id')
+    api_key = request.headers.get(AUTHKEY_HEADER)
     file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], "dataset_{}_{}.csv".format(given_id, api_key))
-
-    if given_id is None or given_id == '':
-        return {'error': 'No Dataset ID provided'}, BAD_REQUEST
 
     if not os.path.exists(file_path):
         return {'error': 'Dataset does not exist; create one before trying again'}, REQUEST_CONFLICT
@@ -64,15 +60,12 @@ def delete_data():
 @require_api_key
 def get_columns():
     api_key = request.headers.get(AUTHKEY_HEADER)
-
     given_id = request.form.get('id')
-    if not utils.check_id(given_id):
-        return {'error': 'Invalid ID'}, BAD_REQUEST
 
     model, error = utils.fetch_model(api_key, given_id)
 
     match error:
-        case -1:
+        case -1, 2:
             return {'error': 'Specified model is corrupted'}
         case 0:
             return {'error': 'Specified model id does not exist'}
@@ -85,15 +78,12 @@ def get_columns():
 def add_column_deletion():
     given_column = request.form.get('column')
     api_key = request.headers.get(AUTHKEY_HEADER)
-
     given_id = request.form.get('id')
-    if not utils.check_id(given_id):
-        return {'error': 'Invalid ID'}, BAD_REQUEST
 
     model, error = utils.fetch_model(api_key, given_id)
 
     match error:
-        case -1:
+        case -1, 2:
             return {'error': 'Specified model is corrupted'}
         case 0:
             return {'error': 'Specified model id does not exist'}
@@ -120,12 +110,16 @@ def add_column_deletion():
 @require_api_key
 def undo_column_deletion():
     given_column = request.form.get('column')
-
+    api_key = request.headers.get(AUTHKEY_HEADER)
     given_id = request.form.get('id')
-    if not utils.check_id(given_id):
-        return {'error': 'Invalid ID'}, BAD_REQUEST
 
-    model = utils.fetch_model(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
+    model, error = utils.fetch_model(api_key, given_id)
+
+    match error:
+        case -1, 2:
+            return {'error': 'Specified model is corrupted'}
+        case 0:
+            return {'error': 'Specified model id does not exist'}
 
     if not model.data_modification_exists(data_proc.ColumnDeletion, given_column):
         return {'error': 'Column Deletion does not exist'}, BAD_REQUEST
@@ -133,7 +127,7 @@ def undo_column_deletion():
     new_index = model.add_deleted_column(given_column)
     model.layers["Input"][new_index] = layers.SpecialInput()
 
-    utils.store_model(model, model.model_path)
+    utils.store_model(api_key, given_id, model)
 
     return {'info': 'Column Deletion removed'}, REQUEST_SUCCEEDED
 

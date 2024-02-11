@@ -10,11 +10,14 @@ from routes.basic import model_basic
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
 
-from routes.helpers.auth import generate_api_key, save_api_key
+from flask_talisman import Talisman
 from werkzeug.middleware.profiler import ProfilerMiddleware
 
 # instantiate the app
 app = Flask(__name__)
+
+Talisman(app)
+
 app.config.from_object(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 300 + (1024 * 1024 * 200)  # Basic request size + large dataset limit
 profile_dir = (Path(__file__).resolve().parent / 'profiles').resolve()

@@ -19,76 +19,70 @@ REQUEST_CONFLICT = 409
 
 REQUEST_NOT_IMPLEMENTED = 501
 
+AUTHKEY_HEADER = 'authkey'
+
 logger = logging.getLogger(__name__)
 
 
 @model_basic.route('/model/create', methods=['POST'])
 @require_api_key
 def create_model():
-    api_key = request.headers.get('API-Key')
-    if api_key not in api_keys:
-        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
-
+    api_key = request.headers.get(AUTHKEY_HEADER)
+    model_name = request.form.get('model_name')
+    given_type = request.form.get('type')
+    visual_name = request.form.get('visual_name')
     given_id = request.form.get('id')
-    if not utils.check_id(given_id):
-        return {'error': 'Invalid ID'}, BAD_REQUEST
+
     file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], "dataset_{}_{}.csv".format(given_id, api_key))
 
     if not os.path.exists(file_path):
         return {'error': 'Dataset does not exist; create one before trying again'}, REQUEST_CONFLICT
 
-    model_name = request.form.get('model_name')
-    given_type = request.form.get('type')
-    visual_name = request.form.get('visual_name')
+    error, model = create_model()
 
-    model = md.create_model(file_path, model_name, visual_name, given_type)
-    return_value = model[0]
-    model = model[1]
+    utils.store_model(api_key, given_id, model)
 
-    utils.store_model(model, model_path)
-
-    return return_value, REQUEST_CREATED
+    return error, REQUEST_CREATED
 
 
 @model_basic.route('/model', methods=['delete'])
 def delete_model():
-    api_key = request.headers.get('API-Key')
-    if api_key not in api_keys:
-        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
+    api_key = request.headers.get(AUTHKEY_HEADER)
+    given_id = request.form.get('id')
+
+    utils.delete_model(api_key, given_id)
+    return {'info': 'Successfully deleted the model'}
 
 
 @model_basic.route('/model/name', methods=['GET'])
 def get_model_name():
+    api_key = request.headers.get(AUTHKEY_HEADER)
     given_id = request.form.get('id')
-    if not utils.check_id(given_id):
-        return {'error': 'Invalid ID'},
-    model_path = os.path.join(current_app.config['UPLOAD_FOLDER'], "model_{}_{}.pk1".format(given_id, api_key))
 
-    if not os.path.exists(model_path):
-        return {'error': 'Model does not exist; create one before trying again'}, REQUEST_CONFLICT
+    model, error = utils.fetch_model(api_key, given_id)
 
-    model = utils.fetch_model(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
+    match error:
+        case -1, 2:
+            return {'error': 'Specified model is corrupted and cannot be deleted'}
+        case 0:
+            return {'error': 'Specified model id does not exist'}
 
     return model.name
 
 
 @model_basic.route('/model/features', methods=['POST'])
 def specify_model_features():
-    api_key = request.headers.get('API-Key')
-    if api_key not in api_keys:
-        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
-
+    api_key = request.headers.get(AUTHKEY_HEADER)
     given_id = request.form.get('id')
-    if not utils.check_id(given_id):
-        return {'error': 'Invalid ID'}, BAD_REQUEST
-    model_path = os.path.join(current_app.config['UPLOAD_FOLDER'], "model_{}_{}.pk1".format(given_id, api_key))
-
-    if not os.path.exists(model_path):
-        return {'error': 'Model does not exist; create one before trying again'}, REQUEST_CONFLICT
-
-    model = utils.fetch_model(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
-
     given_column = request.form.get('column')
+
+    model, error = utils.fetch_model(api_key, given_id)
+
+    match error:
+        case -1, 2:
+            return {'error': 'Specified model is corrupted and cannot be deleted'}
+        case 0:
+            return {'error': 'Specified model id does not exist'}
 
     if model.data_modification_exists(data_proc.SpecifiedFeature, given_column):
         return {'error': 'Column feature already added'}, REQUEST_CONFLICT
@@ -101,26 +95,23 @@ def specify_model_features():
 
     model.feature_count += 1
 
-    utils.store_model(model, model_path)
+    utils.store_model(api_key, given_id, 4)
 
     return {'info': 'Feature specified and will be a training metric'}, REQUEST_SUCCEEDED
 
 
 @model_basic.route('/model/image', methods=['GET'])
 def generate_model_image():
-    api_key = request.headers.get('API-Key')
-    if api_key not in api_keys:
-        return {'error': 'Invalid API Key'}, UNAUTHENTICATED_REQUEST
-
+    api_key = request.headers.get(AUTHKEY_HEADER)
     given_id = request.form.get('id')
-    if not utils.check_id(given_id):
-        return {'error': 'Invalid ID'}, BAD_REQUEST
-    model_path = os.path.join(current_app.config['UPLOAD_FOLDER'], "model_{}_{}.pk1".format(given_id, api_key))
 
-    if not os.path.exists(model_path):
-        return {'error': 'Model does not exist; create one before trying again'}, REQUEST_CONFLICT
+    model, error = utils.fetch_model(api_key, given_id)
 
-    model = utils.fetch_model(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
+    match error:
+        case -1, 2:
+            return {'error': 'Specified model is corrupted and cannot be deleted'}
+        case 0:
+            return {'error': 'Specified model id does not exist'}
 
     model.verify_layers()
 

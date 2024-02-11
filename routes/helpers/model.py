@@ -44,7 +44,23 @@ def create_model(file_path, name, visual_name, network_type):
     for i in range(0, len(column_count)):
         model.layers["Input"][i] = layers.SpecialInput()
 
-    return [{'info': 'Model created successfully'}, model]
+    return {'info': 'Model created successfully'}, model
+
+class DataProcessor:
+    #
+    pass
+
+
+class ModelCompiler:
+    pass
+
+
+class HyperparameterManager:
+    pass
+
+
+class ModelManipulator:
+    pass
 
 
 class Model:
@@ -180,6 +196,7 @@ class Model:
 
         return self.layers[horizontal][position].update_layer_output(subsplit_size, new_horizontal, positional_offset)
 
+    # TODO WHAT THE GENUINE FUCK IS THIS
     def verify_layers(self):
         dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
 
@@ -339,10 +356,10 @@ class Model:
             feature_output = pandas.concat(features, axis=1)
 
         lr_schedule = tf.keras.optimizers.schedules.InverseTimeDecay(
-            0.01,
-            decay_steps=149 * 1000,
-            decay_rate=1,
-            staircase=False)
+                                                    0.01,
+                                                    decay_steps=149 * 1000,
+                                                    decay_rate=1,
+                                                    staircase=False)
 
         output = tf.keras.layers.Dense(self.feature_count, activation='sigmoid')(real_layer)
         tmodel = tf.keras.Model(sym_input_tensors, output)
