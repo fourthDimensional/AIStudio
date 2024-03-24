@@ -2,9 +2,9 @@ import os
 import logging
 
 from flask import Blueprint, current_app, request
-from routes.helpers.auth import require_api_key
+from routes.helpers.submodules.auth import require_api_key
 
-from routes.helpers import data_proc, utils, layers
+from routes.helpers.submodules import data_proc, layers, utils
 
 data_views = Blueprint('data_views', __name__)
 
@@ -65,7 +65,7 @@ def get_columns():
     model, error = utils.fetch_model(api_key, given_id)
 
     match error:
-        case -1, 2:
+        case -1, -2:
             return {'error': 'Specified model is corrupted'}
         case 0:
             return {'error': 'Specified model id does not exist'}
@@ -83,7 +83,7 @@ def add_column_deletion():
     model, error = utils.fetch_model(api_key, given_id)
 
     match error:
-        case -1, 2:
+        case -1, -2:
             return {'error': 'Specified model is corrupted'}
         case 0:
             return {'error': 'Specified model id does not exist'}
@@ -116,7 +116,7 @@ def undo_column_deletion():
     model, error = utils.fetch_model(api_key, given_id)
 
     match error:
-        case -1, 2:
+        case -1, -2:
             return {'error': 'Specified model is corrupted'}
         case 0:
             return {'error': 'Specified model id does not exist'}

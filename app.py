@@ -1,6 +1,7 @@
 import os
 import logging
 
+import redis
 from flask import Flask, jsonify, abort
 from flask_cors import CORS
 
@@ -17,6 +18,17 @@ from werkzeug.middleware.profiler import ProfilerMiddleware
 app = Flask(__name__)
 
 Talisman(app)
+
+redis_host: str = 'localhost'
+redis_port: int = 6379
+redis_db: int = 0
+
+app.config['DATABASE'] = redis.Redis(
+    host=os.getenv('REDIS_HOST', redis_host),
+    port=int(os.getenv('REDIS_PORT', str(redis_port))),
+    password=os.getenv('REDIS_PASSWORD'),
+    decode_responses=True
+)
 
 app.config.from_object(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 300 + (1024 * 1024 * 200)  # Basic request size + large dataset limit

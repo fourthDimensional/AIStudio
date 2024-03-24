@@ -9,13 +9,12 @@ import json
 
 import pandas as pd
 
-from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 MAX_NETWORKS_PER_PERSON = 30
 MODEL_PATH = '$'
 MAX_LOGS = 15
-PROFILER_DIR = (Path(__file__).resolve().parent.parent.parent / 'profiles').resolve()
+PROFILER_DIR = (Path(__file__).resolve().parent.parent.parent.parent / 'profiles').resolve()
 SECRET_KEY = os.getenv("HMAC_SECRET")
 
 # Configuration for Redis connection
@@ -109,7 +108,7 @@ def fetch_model(api_key, model_id, redis_server=redis_client, secret=SECRET_KEY)
     if verify_signature(serialized_model, signature, secret):
         logging.info('Verified HMAC signature')
         logging.info('Decoding serialized model')
-        return jsonpickle.decode(serialized_model, keys=True), 1
+        return jsonpickle.decode(serialized_model, keys=True, on_missing='error'), 1
     else:
         logging.warning(f'SECURITY - Serialized model at "{model_key}" has been modified')
         return None, -2

@@ -1,9 +1,9 @@
 import os
 
 from flask import Blueprint, current_app, request, send_file
-from routes.helpers.auth import require_api_key
+from routes.helpers.submodules.auth import require_api_key
 
-from routes.helpers import model as md, utils, data_proc
+from routes.helpers.submodules import data_proc, utils
 import logging
 
 model_basic = Blueprint('model_basic', __name__)
@@ -62,7 +62,7 @@ def get_model_name():
     model, error = utils.fetch_model(api_key, given_id)
 
     match error:
-        case -1, 2:
+        case -1, -2:
             return {'error': 'Specified model is corrupted and cannot be deleted'}
         case 0:
             return {'error': 'Specified model id does not exist'}
@@ -79,7 +79,7 @@ def specify_model_features():
     model, error = utils.fetch_model(api_key, given_id)
 
     match error:
-        case -1, 2:
+        case -1, -2:
             return {'error': 'Specified model is corrupted and cannot be deleted'}
         case 0:
             return {'error': 'Specified model id does not exist'}
@@ -108,7 +108,7 @@ def generate_model_image():
     model, error = utils.fetch_model(api_key, given_id)
 
     match error:
-        case -1, 2:
+        case -1, -2:
             return {'error': 'Specified model is corrupted and cannot be deleted'}
         case 0:
             return {'error': 'Specified model id does not exist'}

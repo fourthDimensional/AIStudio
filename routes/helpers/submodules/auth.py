@@ -130,7 +130,8 @@ def require_api_key(view_func: Callable) -> Callable:
             return response
         except Exception as e:
             update_api_key_metadata(api_key, success=False)
-            return {'internal_error': str(e), 'traceback': traceback.format_exc()}, 500
+            raise e
+            # return {'internal_error': str(e), 'traceback': traceback.format_exc()}, 500
 
     return wrapper
 

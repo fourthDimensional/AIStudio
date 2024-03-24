@@ -1,5 +1,5 @@
 import pytest
-from routes.helpers.grouping import SimilarityGrouper, \
+from routes.helpers.submodules.grouping import SimilarityGrouper, \
     StringGroupingInterface
 
 

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch
 from flask import Flask
-import routes.helpers.auth as auth
+import routes.helpers.submodules.auth as auth
 
 
 @pytest.fixture
@@ -15,7 +15,7 @@ def mock_redis():
 
     :return: Yields a mock Redis client object with predefined return values.
     """
-    with patch('routes.helpers.auth.redis_client') as mock:
+    with patch('routes.helpers.submodules.auth.redis_client') as mock:
         mock.json.return_value.get.return_value = [True]  # Mimics returning a list of matching objects
         mock.json.return_value.set.return_value = True  # Mimics simple boolean success
         mock.json.return_value.delete.return_value = True  # Mimics boolean success

@@ -2,9 +2,9 @@ import os
 import logging
 
 from flask import Blueprint, current_app, request
-from routes.helpers.auth import require_api_key
+from routes.helpers.submodules.auth import require_api_key
 
-from routes.helpers import utils
+from routes.helpers.submodules import utils
 
 layers = Blueprint('layers', __name__)
 

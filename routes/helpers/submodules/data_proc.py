@@ -1,5 +1,4 @@
 import logging
-from routes.helpers import utils
 
 logger = logging.getLogger(__name__)
 
