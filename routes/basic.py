@@ -2,6 +2,7 @@ import os
 
 from flask import Blueprint, current_app, request, send_file
 from routes.helpers.submodules.auth import require_api_key
+import routes.helpers.model as model_interface
 
 from routes.helpers.submodules import data_proc, utils
 import logging
@@ -38,7 +39,7 @@ def create_model():
     if not os.path.exists(file_path):
         return {'error': 'Dataset does not exist; create one before trying again'}, REQUEST_CONFLICT
 
-    error, model = create_model()
+    error, model = model_interface.create_model(file_path, model_name, visual_name, given_type)
 
     utils.store_model(api_key, given_id, model)
 
@@ -95,7 +96,7 @@ def specify_model_features():
 
     model.feature_count += 1
 
-    utils.store_model(api_key, given_id, 4)
+    utils.store_model(api_key, given_id, model)
 
     return {'info': 'Feature specified and will be a training metric'}, REQUEST_SUCCEEDED
 

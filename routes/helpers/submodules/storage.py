@@ -24,7 +24,6 @@ class AbstractKeyDatabase(ABC):
         pass
 
 
-# TODO 'good coding practices will save you time' they said
 class RedisDatabase(AbstractKeyDatabase):
     def __init__(self, redis_connection):
         self.redis_connection: Redis = redis_connection

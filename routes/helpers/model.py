@@ -127,7 +127,6 @@ class Model:
         else:
             self.layers[horizontal] = {position: None}
 
-        # TODO WHAT THE FUCK IS THIS
         match layer_type:
             case "batch_normalization":
                 self.layers[horizontal][position] = layers.BatchNormalization()

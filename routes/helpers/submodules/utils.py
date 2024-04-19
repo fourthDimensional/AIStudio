@@ -26,12 +26,10 @@ redis_db: int = 0
 redis_client = redis.Redis(
     host=os.getenv('REDIS_HOST', redis_host),
     port=int(os.getenv('REDIS_PORT', str(redis_port))),
-    password=os.getenv('REDIS_PASSWORD'),
     decode_responses=True
 )
 
 logger = logging.getLogger(__name__)
-
 
 def check_naming_convention(string):
     """

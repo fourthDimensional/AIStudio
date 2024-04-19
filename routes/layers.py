@@ -32,13 +32,18 @@ def create_layer():
     column = request.form.get('column')
     position = request.form.get('position')
 
-    model = utils.fetch_model(given_id, api_key, current_app.config['UPLOAD_FOLDER'])
-    model_path = os.path.join(current_app.config['UPLOAD_FOLDER'], "model_{}_{}.pk1".format(given_id, api_key))
+    model, error = utils.fetch_model(api_key, given_id)
+
+    match error:
+        case -1, -2:
+            return {'error': 'Specified model is corrupted and cannot be deleted'}
+        case 0:
+            return {'error': 'Specified model id does not exist'}
 
     if not model.add_layer(layer_type, int(column), int(position)):
         return {'error': 'Layer already exists in that position'}, BAD_REQUEST
 
-    utils.store_model(model, model_path)
+    utils.store_model(api_key, given_id, model)
 
     return {'info': 'Layer added'}, REQUEST_CREATED
 

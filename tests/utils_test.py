@@ -11,12 +11,12 @@ from redis.commands.json.path import Path
 
 # Update these variables as needed
 SECRET_KEY = 'cheese'
-utils.SECRET_KEY = SECRET_KEY  # Make sure this is set correctly in the utils module
+utils.SECRET_KEY = SECRET_KEY
 
 # Sample data for use in tests
-VALID_API_KEY = "3465d156a54ab1c880cf8210975758a3"
-UUID = "c969ab10"
-MODEL_ID = "1"  # Ensuring this is a string for consistency
+VALID_API_KEY = "1c9962737975ab0fc0cfd3dad6028e30"
+UUID = "8a662bfe"
+MODEL_ID = "1"
 MODEL = {"name": "test_model"}
 API_KEY_STRUCTURE = {'uuid': UUID}
 SERIALIZED_MODEL = jsonpickle.encode(MODEL, unpicklable=False)  # Ensuring it's a string

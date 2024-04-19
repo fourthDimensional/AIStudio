@@ -12,3 +12,6 @@ scikit-learn~=1.4.0
 textblob~=0.17.1
 requests~=2.31.0
 rq~=1.15.1
+flask_cors
+fakeredis
+flask_talisman

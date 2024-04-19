@@ -14,10 +14,12 @@ from logging.handlers import RotatingFileHandler
 from flask_talisman import Talisman
 from werkzeug.middleware.profiler import ProfilerMiddleware
 
+from routes.helpers.submodules.auth import generate_api_key, save_api_key
+
 # instantiate the app
 app = Flask(__name__)
 
-Talisman(app)
+# Talisman(app)
 
 redis_host: str = 'localhost'
 redis_port: int = 6379
@@ -26,7 +28,6 @@ redis_db: int = 0
 app.config['DATABASE'] = redis.Redis(
     host=os.getenv('REDIS_HOST', redis_host),
     port=int(os.getenv('REDIS_PORT', str(redis_port))),
-    password=os.getenv('REDIS_PASSWORD'),
     decode_responses=True
 )
 
@@ -54,8 +55,7 @@ app.register_blueprint(model_basic)
 app.register_blueprint(layers)
 app.register_blueprint(data_views)
 
-
-# save_api_key(generate_api_key(), 'development', 'test', 'user', 'test@email.com')
+save_api_key(generate_api_key(), 'development', 'test', 'user', 'test@email.com')
 
 def setup_logging():
     # Create the root logger
