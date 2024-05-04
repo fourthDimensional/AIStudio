@@ -83,6 +83,13 @@ def setup_logging():
 
 setup_logging()
 
+@app.route('/authenticate', methods=['GET'])
+def authenticate():
+    data = request.get_json()
+    username = data['username']
+    password = data['password']
+
+
 
 def main():
     app.run(port=5000)

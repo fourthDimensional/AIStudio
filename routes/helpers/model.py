@@ -41,21 +41,8 @@ def create_model(file_path, name, visual_name, network_type):
 
     return {'info': 'Model created successfully'}, model
 
-class DataProcessor:
-    #
-    pass
 
 
-class ModelCompiler:
-    pass
-
-
-class HyperparameterManager:
-    pass
-
-
-class ModelManipulator:
-    pass
 
 
 class Model:
