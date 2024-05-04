@@ -136,3 +136,8 @@ def undo_column_deletion():
 @require_api_key
 def verify_data_integrity():
     return {}, REQUEST_NOT_IMPLEMENTED
+
+
+@data_views.route('/data/information', methods=['GET'])
+def get_data_information():
+    return {}, REQUEST_NOT_IMPLEMENTED

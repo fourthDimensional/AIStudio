@@ -15,3 +15,4 @@ rq~=1.15.1
 flask_cors
 fakeredis
 flask_talisman
+class_registry
