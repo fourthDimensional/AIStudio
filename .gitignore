@@ -5,6 +5,8 @@ static/files/
 app.log
 prod_todo.txt
 .idea/
+REDIS_DATA
+.idea
 
 *.pyc
 .env
