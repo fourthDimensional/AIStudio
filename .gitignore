@@ -4,6 +4,7 @@ static/files/
 .pytest_cache
 app.log
 prod_todo.txt
+.idea/
 
 *.pyc
 .env
