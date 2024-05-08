@@ -5,7 +5,7 @@ import time
 import logging
 from flask import request
 from typing import Callable, Any, Dict
-from functools import wraps
+from functools import wraps, lru_cache
 
 from redis import Redis, RedisError
 
@@ -23,6 +23,7 @@ redis_client = Redis(
 
 logger: logging.Logger = logging.getLogger(__name__)
 
+SESSION_TOKEN_TTL: int = 60 * 60 * 24 * 7  # 1 week in seconds
 
 def generate_api_key() -> str:
     """
@@ -59,7 +60,8 @@ def save_api_key(api_key: str, env: str, first_name: str, last_name: str, email:
         'usage': {
             'total_requests': 0,
             'successful_requests': 0
-        }
+        },
+        'active_tokens': []
     }
 
     try:
@@ -105,6 +107,94 @@ def delete_api_key(api_key: str) -> int:
     return result
 
 
+def deregister_session_token(session_token: str) -> int:
+    pass
+
+
+def register_session_token(api_key: str) -> str:
+    """
+    Registers a new session token for the specified API key.
+
+    :param api_key: The API key for which to register a session token.
+
+    :return: The generated session token.
+    """
+    session_token: str = secrets.token_hex(16)
+    try:
+        try:
+            active_tokens = redis_client.json().get(f"api_key:{api_key}", '$.active_tokens')
+            for token in active_tokens:
+                redis_client.delete(f"session_token:{token}")
+        except RedisError as e:
+            logging.error(f"Failed to delete existing session tokens for API key {api_key}: {e}")
+
+        redis_client.json().set(f"session_token:{session_token}", '$', {
+            'active': True,
+            'apikey': api_key,
+            'time_created': int(time.time())
+        })
+        redis_client.json().arrappend(f"api_key:{api_key}", '$.active_tokens', session_token)
+
+        redis_client.expire(f"session_token:{session_token}", SESSION_TOKEN_TTL)
+    except RedisError as e:
+        logging.error(f"Failed to register session token for API key {api_key} on Redis: {e}")
+
+    return session_token, api_key
+
+
+def is_valid_session_token(session_token: str) -> bool:
+    """
+    Checks if the provided session token is valid and active.
+
+    :param session_token: The session token to validate.
+
+    :return: True if the session token is valid; False otherwise.
+    """
+    logging.info("QUERYing for session token provided by request")
+    result: any = None
+
+    try:
+        result = redis_client.json().get("session_token:{}".format(session_token), '$')[0]
+    except RedisError as e:
+        logging.error(f"Failed to verify session token {session_token} from Redis: {e}")
+    except TypeError:
+        return False
+
+    if result is None:
+        return False
+
+    if not is_valid_api_key(result['apikey']):
+        return False
+
+    if result['active'] is False:
+        return False
+    else:
+        return True
+
+
+def is_valid_auth(api_key: str, session_token: str) -> bool:
+    """
+    Checks if the provided session token is valid and active.
+
+    :param api_key: The API key to validate.
+    :param session_token: The session token to validate.
+
+    :return: True if the session token or api-key is valid; False otherwise. Additionally, returns the api-key if the session token is valid.
+    returns error if both are invalid.
+    """
+    if not is_valid_api_key(api_key):
+        if session_token is not None:
+            logging.info('API KEY is invalid, checking for session token')
+            if not is_valid_session_token(session_token):
+                return None, None, ({'error': 'Invalid Session Token'}, 401)
+            api_key = redis_client.json().get(f"session_token:{session_token}", '$.apikey')[0]
+            logging.info('Session Token verified')
+        else:
+            return None, None, ({'error': 'Invalid API Key'}, 401)
+
+    return True, api_key, None
+
+
 def require_api_key(view_func: Callable) -> Callable:
     """
     Decorator function that requires an API key for accessing a view.
@@ -116,13 +206,15 @@ def require_api_key(view_func: Callable) -> Callable:
 
     @wraps(view_func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
-        api_key = request.headers.get('authkey')
-        logging.info('Checking if API KEY is valid')
+        session_token = request.cookies.get('session')
+        api_key = request.headers.get('authkey', None)
 
-        if not is_valid_api_key(api_key):
-            return {'error': 'Invalid API Key'}, 401
+        validity, api_key, error = is_valid_auth(api_key, session_token)
 
-        logging.info('API KEY verified')
+        if not validity:
+            return error
+
+        logging.info('API KEY/Session Token verified')
         try:
             response = view_func(*args, **kwargs)
             update_api_key_metadata(api_key, success=True)

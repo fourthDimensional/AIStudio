@@ -7,6 +7,8 @@ import routes.helpers.model as model_interface
 from routes.helpers.submodules import data_proc, utils
 import logging
 
+
+
 model_basic = Blueprint('model_basic', __name__)
 
 REQUEST_SUCCEEDED = 200

@@ -1,10 +1,27 @@
 import os
 import logging
 
-from flask import Blueprint, current_app, request
-from routes.helpers.submodules.auth import require_api_key
+from flask import Blueprint, current_app, request, jsonify
+from routes.helpers.submodules.auth import require_api_key, is_valid_auth
 
 from routes.helpers.submodules import data_proc, layers, utils
+from routes.helpers.submodules.worker import data_info
+
+from redis import Redis
+from rq import Queue
+
+# Configuration for Redis connection
+redis_host: str = 'localhost'
+redis_port: int = 6379
+redis_db: int = 0
+
+redis_queue = Queue('data', connection=Redis())
+
+REDIS_CONNECTION_INFO = {
+    'host': os.getenv('REDIS_HOST', redis_host),
+    'port': int(os.getenv('REDIS_PORT', str(redis_port))),
+    'decode_responses': True
+}
 
 data_views = Blueprint('data_views', __name__)
 
@@ -138,6 +155,40 @@ def verify_data_integrity():
     return {}, REQUEST_NOT_IMPLEMENTED
 
 
-@data_views.route('/data/information', methods=['GET'])
-def get_data_information():
-    return {}, REQUEST_NOT_IMPLEMENTED
+@data_views.route('/data', methods=['GET'])
+@require_api_key
+def list_datasets():
+    api_key = request.headers.get('authkey')
+    if not api_key:  # checks if session token was provided instead
+        _, api_key, _ = is_valid_auth(None, request.headers.get('session'))  # Uses one to get the other, because
+        # the API key is needed to store the result
+
+    datasets = []
+    for file in os.listdir(current_app.config['DATASET_FOLDER']):
+        if file.endswith('.csv'):
+            # also have file size and csv # of entries
+            dataset = {
+                'name': file[:-4],
+                'size': os.path.getsize(os.path.join(current_app.config['DATASET_FOLDER'], file)),
+                'entries': len(open(os.path.join(current_app.config['DATASET_FOLDER'], file)).readlines())
+            }
+
+            datasets.append(dataset)
+
+    return jsonify(datasets), 200
+
+
+@data_views.route('/data/information', methods=['POST'])
+@require_api_key
+def start_data_processing():
+    api_key = request.headers.get('authkey')
+    if not api_key: # checks if session token was provided instead
+        _, api_key, _ = is_valid_auth(None, request.headers.get('session')) # Uses one to get the other, because
+        # the API key is needed to store the result
+
+    job = redis_queue.enqueue(data_info.generate_profile_report, 'aids_classification_small', api_key, REDIS_CONNECTION_INFO)
+    return jsonify({'info': 'Data processing started', 'job_id': job.id}), REQUEST_CREATED
+
+
+
+

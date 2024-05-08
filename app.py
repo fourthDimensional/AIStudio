@@ -2,19 +2,21 @@ import os
 import logging
 
 import redis
-from flask import Flask, jsonify, abort
+from flask import Flask, jsonify, abort, request, make_response
 from flask_cors import CORS
 
 from routes.data import data_views
 from routes.layers import layers
 from routes.basic import model_basic
+from routes.workers import workers
+
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
 
 from flask_talisman import Talisman
 from werkzeug.middleware.profiler import ProfilerMiddleware
 
-from routes.helpers.submodules.auth import generate_api_key, save_api_key
+from routes.helpers.submodules.auth import generate_api_key, save_api_key, require_api_key, register_session_token, is_valid_api_key
 
 # instantiate the app
 app = Flask(__name__)
@@ -46,16 +48,18 @@ app.wsgi_app = ProfilerMiddleware(
 )
 
 # enable CORS
-CORS(app, resources={r'/*': {'origins': '*'}})
+CORS(app, resources={r'/*': {'origins': '*'}}, supports_credentials=True)
 
 UPLOAD_FOLDER = 'static/files'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['DATASET_FOLDER'] = 'static/datasets'
 
 app.register_blueprint(model_basic)
 app.register_blueprint(layers)
 app.register_blueprint(data_views)
+app.register_blueprint(workers)
 
-save_api_key(generate_api_key(), 'development', 'test', 'user', 'test@email.com')
+# save_api_key(generate_api_key(), 'development', 'test', 'user', 'test@email.com')
 
 def setup_logging():
     # Create the root logger
@@ -83,13 +87,40 @@ def setup_logging():
 
 setup_logging()
 
-@app.route('/authenticate', methods=['GET'])
-def authenticate():
-    data = request.get_json()
-    username = data['username']
-    password = data['password']
+@app.route('/generate_api_key', methods=['POST'])
+def generate_key():
 
+    logging.warning('The generate api key route was just used. Please remember to remove this route before deployment.')
+
+    api_key = generate_api_key()
+    save_api_key(api_key, 'development', 'test', 'user', 'test@email.com')
+    return jsonify({'api_key': api_key}), 200
+
+
+# locked testing api key verified route
+@app.route('/authenticated', methods=['GET'])
+@require_api_key
+def authenticated():
+    return jsonify({'message': 'API Key verified'}), 200
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    api_key = request.headers.get('authkey')
+
+    if api_key is None:
+        return jsonify({'error': 'No API Key provided'}), 401
+
+    if not is_valid_api_key(api_key):
+        return jsonify({'error': 'Invalid API Key'}), 401
+
+    session_token, _ = register_session_token(api_key)
+
+    response = make_response()
+    response.set_cookie('session', value=session_token, secure=True, httponly=True, samesite='Strict')
+
+    return response, 200
 
 
 def main():
-    app.run(port=5000)
+    app.run(port=5001)

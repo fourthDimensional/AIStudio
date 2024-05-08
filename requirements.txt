@@ -16,3 +16,4 @@ flask_cors
 fakeredis
 flask_talisman
 class_registry
+ydata_profiling

@@ -28,7 +28,7 @@
           <list>
             <DockerVolumeBindingImpl>
               <option name="containerPath" value="/data" />
-              <option name="hostPath" value="C:\Users\sabar\PycharmProjects\AIStudio\REDIS_DATA" />
+              <option name="hostPath" value="C:\Users\finep\OneDrive\Documents\AI Studio\REDIS_DATA" />
             </DockerVolumeBindingImpl>
           </list>
         </option>
