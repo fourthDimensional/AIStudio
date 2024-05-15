@@ -1,9 +1,9 @@
 import classmethod
 
 class Project:
-    def __init__(self):
+    def __init__(self, dataset):
         self.model_registry = {}
 
-        self.dataset =
+        self.dataset = dataset
 
         pass

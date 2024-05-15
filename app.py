@@ -9,6 +9,7 @@ from routes.data import data_views
 from routes.layers import layers
 from routes.basic import model_basic
 from routes.workers import workers
+from routes.project import project
 
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
@@ -58,6 +59,7 @@ app.register_blueprint(model_basic)
 app.register_blueprint(layers)
 app.register_blueprint(data_views)
 app.register_blueprint(workers)
+app.register_blueprint(project)
 
 # save_api_key(generate_api_key(), 'development', 'test', 'user', 'test@email.com')
 

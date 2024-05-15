@@ -38,3 +38,4 @@ def generate_profile_report(name: str, apikey: str, redis_connection_info: dict)
     redis_client.json().set(f"profile_report:{apikey}:{name}", '$', json.loads(json_data)) # TODO ADD CONSISTENT STRING CLEANING
 
     return f"profile_report:{apikey}:{name}"
+    app.register_blueprint(project)
