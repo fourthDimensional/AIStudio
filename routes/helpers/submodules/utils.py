@@ -52,6 +52,7 @@ def get_uuid(api_key, redis_server=redis_client):
 
     Logs a message indicating the action of querying for the UUID.
 
+    :param redis_server:
     :param api_key: The API key for which the UUID is being queried.
     :return: The UUID associated with the provided API key.
     """
@@ -86,6 +87,8 @@ def fetch_model(api_key, model_id, redis_server=redis_client, secret=SECRET_KEY)
     Logs various stages of the operation, including fetching, signature verification, and decoding of the model.
     If the model's signature is verified, attempts to decode the serialized model.
 
+    :param secret:
+    :param redis_server:
     :param api_key: The API key associated with the user.
     :param model_id: The ID of the model to fetch.
     :return: A tuple containing the decoded model and a status code (1 for success, -1 for failure, 0 if model does not exist).
@@ -118,6 +121,8 @@ def store_model(api_key, model_id, model, redis_server=redis_client, secret=SECR
 
     Serializes the model, generates a signature for it, and then stores both the model and its signature in Redis.
 
+    :param secret:
+    :param redis_server:
     :param api_key: The API key associated with the user.
     :param model_id: The ID for the model to store.
     :param model: The model to be stored.
@@ -226,6 +231,7 @@ def delete_model(api_key, model_id, redis_server=redis_client):
     """
     Delete a model from the database using the provided API key and model ID.
 
+    :param redis_server:
     :param api_key: The API key associated with the user.
     :param model_id: The ID of the model to delete.
     :return: 1 if the model was successfully deleted, 0 if the model does not exist.
