@@ -13,7 +13,9 @@ textblob~=0.17.1
 requests~=2.31.0
 rq~=1.15.1
 flask_cors
-fakeredis
+fakeredis~=2.21.3
 flask_talisman
 class_registry
 ydata_profiling
+boto3
+botocore

@@ -66,4 +66,14 @@ def get_project():
 
     # return project information
 
-    return project, REQUEST_SUCCEEDED
+    return _, REQUEST_SUCCEEDED
+
+@require_api_key
+@project.route('/projects', methods=['GET'])
+def list_projects():
+    api_key = request.headers.get(AUTHKEY_HEADER)
+    project_id = request.form.get('id')
+
+    # return list of projects
+
+    return _, REQUEST_SUCCEEDED

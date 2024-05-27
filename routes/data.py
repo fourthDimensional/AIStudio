@@ -6,6 +6,7 @@ from routes.helpers.submodules.auth import require_api_key, is_valid_auth
 
 from routes.helpers.submodules import data_proc, layers, utils
 from routes.helpers.submodules.worker import data_info
+from routes.helpers.submodules.storage import StorageInterface, RedisFileStorage
 
 from redis import Redis
 from rq import Queue
@@ -24,6 +25,8 @@ REDIS_CONNECTION_INFO = {
 }
 
 data_views = Blueprint('data_views', __name__)
+
+dataset_storage = StorageInterface(RedisFileStorage(Redis(**REDIS_CONNECTION_INFO)))
 
 REQUEST_SUCCEEDED = 200
 REQUEST_CREATED = 201
@@ -155,14 +158,9 @@ def verify_data_integrity():
     return {}, REQUEST_NOT_IMPLEMENTED
 
 
-@data_views.route('/data', methods=['GET'])
+@data_views.route('/data/summary', methods=['GET'])
 @require_api_key
 def list_datasets():
-    api_key = request.headers.get('authkey')
-    if not api_key:  # checks if session token was provided instead
-        _, api_key, _ = is_valid_auth(None, request.headers.get('session'))  # Uses one to get the other, because
-        # the API key is needed to store the result
-
     datasets = []
     for file in os.listdir(current_app.config['DATASET_FOLDER']):
         if file.endswith('.csv'):
@@ -175,7 +173,37 @@ def list_datasets():
 
             datasets.append(dataset)
 
-    return jsonify(datasets), 200
+    return jsonify(datasets), REQUEST_SUCCEEDED
+
+@data_views.route('/data/private/summary', methods=['GET'])
+@require_api_key
+def list_private_datasets():
+    api_key = request.headers.get('authkey')
+    if not api_key:
+        _, api_key, _ = is_valid_auth(None, request.cookies.get('session'))
+
+    _, metadata = api_key
+
+    dataset_keys = metadata['dataset_keys']
+
+    dataset_info = []
+
+    for dataset_key in dataset_keys:
+        if not dataset_storage.exists(f"{api_key}:{dataset_key}"):
+            logging.info(f'Invalid dataset key is present in {api_key}\'s metadata. Skipping.')
+
+            logging.info(f"{api_key}:{dataset_key}")
+            continue
+
+        dataset = dataset_storage.get_file_metadata(f"{api_key}:{dataset_key}")
+        dataset_info.append({
+            'name': dataset['name'],
+            'size': dataset['size'],
+            'entries': dataset['entries']
+        })
+
+    return jsonify(dataset_info), REQUEST_SUCCEEDED
+
 
 
 @data_views.route('/data/information', methods=['POST'])
@@ -185,6 +213,8 @@ def start_data_processing():
     if not api_key: # checks if session token was provided instead
         _, api_key, _ = is_valid_auth(None, request.headers.get('session')) # Uses one to get the other, because
         # the API key is needed to store the result
+
+    api_key, _ = api_key # metadata is unneeded
 
     job = redis_queue.enqueue(data_info.generate_profile_report, 'aids_classification_small', api_key, REDIS_CONNECTION_INFO)
     return jsonify({'info': 'Data processing started', 'job_id': job.id}), REQUEST_CREATED

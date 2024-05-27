@@ -17,7 +17,7 @@ from logging.handlers import RotatingFileHandler
 from flask_talisman import Talisman
 from werkzeug.middleware.profiler import ProfilerMiddleware
 
-from routes.helpers.submodules.auth import generate_api_key, save_api_key, require_api_key, register_session_token, is_valid_api_key
+from routes.helpers.submodules.auth import generate_api_key, save_api_key, require_api_key, register_session_token, is_valid_api_key, deregister_session_token
 
 # instantiate the app
 app = Flask(__name__)
@@ -120,6 +120,25 @@ def login():
 
     response = make_response()
     response.set_cookie('session', value=session_token, secure=True, httponly=True, samesite='Strict')
+
+    return response, 200
+
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    session_token = request.cookies.get('session')
+
+    if session_token is None:
+        return jsonify({'error': 'No session token provided'}), 401
+
+    if not is_valid_session_token(session_token):
+        return jsonify({'error': 'Invalid session token'}), 401
+
+    # TODO add error handling here
+    deregister_session_token(session_token)
+
+    response = make_response()
+    response.set_cookie('session', value='', secure=True, httponly=True, samesite='Strict')
 
     return response, 200
 

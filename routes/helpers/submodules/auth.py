@@ -61,13 +61,21 @@ def save_api_key(api_key: str, env: str, first_name: str, last_name: str, email:
             'total_requests': 0,
             'successful_requests': 0
         },
-        'active_tokens': []
+        'active_tokens': [],
+        'dataset_keys': [],
+        'project_keys': [],
     }
 
     try:
         redis_client.json().set(f"api_key:{api_key}", '$', key_structure)
     except RedisError as e:
         logging.error(f"Failed to save API key {api_key} to Redis: {e}")
+
+    logging.warning('Using temporary memory saving code to delete previous API-keys')
+    keys: list = redis_client.keys('api_key:*')
+    for key in keys:
+        if key != f"api_key:{api_key}":
+            redis_client.delete(key)
 
     return api_key
 
@@ -108,7 +116,15 @@ def delete_api_key(api_key: str) -> int:
 
 
 def deregister_session_token(session_token: str) -> int:
-    pass
+    """
+    Removes the specified session token from Redis.
+
+    :param session_token:
+    """
+    api_key = redis_client.json().get(f"session_token:{session_token}", '$.apikey')[0]
+    token_index = redis_client.json().arrindex(f"api_key:{api_key}", '$.active_tokens', session_token)
+    redis_client.json().arrpop(f"api_key:{api_key}", '$.active_tokens', token_index)
+    return redis_client.delete(f"session_token:{session_token}")
 
 
 def register_session_token(api_key: str) -> str:
@@ -192,7 +208,7 @@ def is_valid_auth(api_key: str, session_token: str) -> bool:
         else:
             return None, None, ({'error': 'Invalid API Key'}, 401)
 
-    return True, api_key, None
+    return True, (api_key, redis_client.json().get(f'api_key:{api_key}')), None
 
 
 def require_api_key(view_func: Callable) -> Callable:
@@ -213,6 +229,8 @@ def require_api_key(view_func: Callable) -> Callable:
 
         if not validity:
             return error
+
+        api_key, _ = api_key # metadata is unneeded
 
         logging.info('API KEY/Session Token verified')
         try:
