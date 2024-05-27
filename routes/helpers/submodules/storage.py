@@ -197,9 +197,7 @@ class RedisFileStorage:
         pass
 
 def encode_file(given_file):
-    print('Encoding: ', given_file)
     return base64.b64encode(given_file).decode('utf-8')
 
 def decode_file(given_file):
-    print('Decoding: ', given_file)
     return base64.b64decode(given_file.encode('utf-8'))

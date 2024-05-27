@@ -182,7 +182,7 @@ def list_private_datasets():
     if not api_key:
         _, api_key, _ = is_valid_auth(None, request.cookies.get('session'))
 
-    _, metadata = api_key
+    api_key, metadata = api_key
 
     dataset_keys = metadata['dataset_keys']
 
@@ -197,6 +197,7 @@ def list_private_datasets():
 
         dataset = dataset_storage.get_file_metadata(f"{api_key}:{dataset_key}")
         dataset_info.append({
+            'key': dataset_key,
             'name': dataset['name'],
             'size': dataset['size'],
             'entries': dataset['entries']
@@ -204,6 +205,68 @@ def list_private_datasets():
 
     return jsonify(dataset_info), REQUEST_SUCCEEDED
 
+
+@data_views.route('/data/private/template/<template_name>', methods=['POST'])
+@require_api_key
+def register_dataset_from_template(template_name):
+    api_key = request.headers.get('authkey')
+    if not api_key:
+        _, api_key, _ = is_valid_auth(None, request.cookies.get('session'))
+
+    api_key, _ = api_key
+
+    if dataset_storage.exists(f"{api_key}:{template_name}"):
+        return {'error': 'Dataset already exists'}, REQUEST_CONFLICT
+
+    # find the csv file labelled the given template name in this folder: os.listdir(current_app.config['DATASET_FOLDER'])
+    # then upload the file to the dataset storage with the metadata 'name', 'size', and 'entries'
+    for file in os.listdir(current_app.config['DATASET_FOLDER']):
+        if file == template_name + '.csv':
+            file_path = os.path.join(current_app.config['DATASET_FOLDER'], file)
+            break
+    else:
+        return {'error': 'Template not found'}, 40
+
+    with open(file_path, 'rb') as f:
+        file_data = f.read()
+
+    dataset_storage.store_file(f"{api_key}:{template_name}", file_data, {
+                                'status': 'uploaded',
+                                'name': template_name,
+                                'size': os.path.getsize(file_path),
+                                'entries': len(open(file_path).readlines())}
+                               )
+
+    # TODO find a cleaner way to do this
+    redis = Redis(**REDIS_CONNECTION_INFO)
+    redis.json().arrappend(f'api_key:{api_key}', '$.dataset_keys', template_name)
+
+    return {'info': 'Dataset registered'}, REQUEST_CREATED
+
+
+@data_views.route('/data/private/<dataset_key>', methods=['GET'])
+@require_api_key
+def get_private_dataset(dataset_key):
+    api_key = request.headers.get('authkey')
+    if not api_key:
+        _, api_key, _ = is_valid_auth(None, request.cookies.get('session'))
+
+    api_key, _ = api_key
+
+    dataset = dataset_storage.get_file(f"{api_key}:{dataset_key}")
+
+    if not dataset:
+        return {'error': 'Dataset not found'}, REQUEST_CONFLICT
+
+    logging.info(str(dataset))
+    return jsonify(dataset.decode('utf-8')), REQUEST_SUCCEEDED
+
+
+@data_views.route('/data/private/<dataset_key>', methods=['DELETE'])
+@require_api_key
+def delete_private_dataset(dataset_key):
+    pass
+    # TODO implement dataset deletion
 
 
 @data_views.route('/data/information', methods=['POST'])
