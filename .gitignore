@@ -11,3 +11,7 @@ REDIS_DATA
 *.pyc
 .env
 
+
+.ideavimrc
+
+static/datasets/

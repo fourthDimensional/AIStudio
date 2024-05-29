@@ -15,7 +15,6 @@ from pathlib import Path
 from logging.handlers import RotatingFileHandler
 
 from flask_talisman import Talisman
-from werkzeug.middleware.profiler import ProfilerMiddleware
 
 from routes.helpers.submodules.auth import generate_api_key, save_api_key, require_api_key, register_session_token, is_valid_api_key, deregister_session_token
 
@@ -36,17 +35,6 @@ app.config['DATABASE'] = redis.Redis(
 
 app.config.from_object(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 300 + (1024 * 1024 * 200)  # Basic request size + large dataset limit
-profile_dir = (Path(__file__).resolve().parent / 'profiles').resolve()
-
-if not os.path.exists(profile_dir):
-    os.makedirs(profile_dir)
-
-# Use ProfilerMiddleware
-app.wsgi_app = ProfilerMiddleware(
-    app.wsgi_app,
-    profile_dir=profile_dir,
-    stream=None
-)
 
 # enable CORS
 CORS(app, resources={r'/*': {'origins': '*'}}, supports_credentials=True)
