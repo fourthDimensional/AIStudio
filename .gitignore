@@ -8,3 +8,15 @@ routes/helpers/apikeys.txt
 AIStudio.zip
 
 qodana.yaml
+
+.idea/
+
+static/datasets/
+
+.ideavimrc
+
+REDIS_DATA/appendonlydir/
+
+REDIS_DATA/
+
+app.log
