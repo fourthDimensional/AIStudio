@@ -3,6 +3,7 @@ import traceback
 import secrets
 import time
 import logging
+import inspect
 from flask import request
 from typing import Callable, Any, Dict
 from functools import wraps, lru_cache
@@ -230,10 +231,16 @@ def require_api_key(view_func: Callable) -> Callable:
         if not validity:
             return error
 
-        api_key, _ = api_key # metadata is unneeded
+        api_key, metadata = api_key
 
         logging.info('API KEY/Session Token verified')
         try:
+            params = inspect.signature(view_func).parameters
+            if 'api_key' in params:
+                kwargs['api_key'] = api_key
+            if 'metadata' in params:
+                kwargs['metadata'] = metadata
+
             response = view_func(*args, **kwargs)
             update_api_key_metadata(api_key, success=True)
             return response

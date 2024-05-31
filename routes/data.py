@@ -178,13 +178,7 @@ def list_datasets():
 
 @data_views.route('/data/template/<template_name>', methods=['POST'])
 @require_api_key
-def register_dataset_from_template(template_name):
-    api_key = request.headers.get('authkey')
-
-    _, metadata_package, _ = is_valid_auth(api_key, request.cookies.get('session'))
-
-    api_key, _ = metadata_package
-
+def register_dataset_from_template(template_name, api_key):
     if dataset_storage.exists(f"{api_key}:{template_name}"):
         return {'error': 'Dataset already exists'}, REQUEST_CONFLICT
 
@@ -216,13 +210,7 @@ def register_dataset_from_template(template_name):
 
 @data_views.route('/data/list', methods=['GET'])
 @require_api_key
-def list_private_datasets():
-    api_key = request.headers.get('authkey')
-
-    _, metadata_package, _ = is_valid_auth(api_key, request.cookies.get('session'))
-
-    api_key, metadata = metadata_package
-
+def list_private_datasets(api_key, metadata):
     dataset_keys = metadata['dataset_keys']
 
     dataset_info = []
@@ -247,31 +235,18 @@ def list_private_datasets():
 
 @data_views.route('/data/<dataset_key>', methods=['GET'])
 @require_api_key
-def get_private_dataset(dataset_key):
-    api_key = request.headers.get('authkey')
-
-    _, metadata_package, _ = is_valid_auth(api_key, request.cookies.get('session'))
-
-    api_key, _ = metadata_package
-
+def get_private_dataset(dataset_key, api_key):
     dataset = dataset_storage.get_file(f"{api_key}:{dataset_key}")
 
     if not dataset:
         return {'error': 'Dataset not found'}, REQUEST_CONFLICT
 
-    logging.info(str(dataset))
     return jsonify(dataset.decode('utf-8')), REQUEST_SUCCEEDED
 
 
 @data_views.route('/data/<dataset_key>', methods=['DELETE'])
 @require_api_key
-def delete_private_dataset(dataset_key):
-    api_key = request.headers.get('authkey')
-
-    _, metadata_package, _ = is_valid_auth(api_key, request.cookies.get('session'))
-
-    api_key, _ = metadata_package
-
+def delete_private_dataset(dataset_key, api_key):
     if not dataset_storage.exists(f"{api_key}:{dataset_key}"):
         return {'error': 'Dataset not found'}, REQUEST_CONFLICT
 
