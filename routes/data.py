@@ -158,7 +158,7 @@ def verify_data_integrity():
     return {}, REQUEST_NOT_IMPLEMENTED
 
 
-@data_views.route('/data/summary', methods=['GET'])
+@data_views.route('/data/template/summary', methods=['GET'])
 @require_api_key
 def list_datasets():
     datasets = []
@@ -175,45 +175,15 @@ def list_datasets():
 
     return jsonify(datasets), REQUEST_SUCCEEDED
 
-@data_views.route('/data/private/summary', methods=['GET'])
-@require_api_key
-def list_private_datasets():
-    api_key = request.headers.get('authkey')
 
-    _, api_key, _ = is_valid_auth(api_key, request.cookies.get('session'))
-
-    api_key, metadata = api_key
-
-    dataset_keys = metadata['dataset_keys']
-
-    dataset_info = []
-
-    for dataset_key in dataset_keys:
-        if not dataset_storage.exists(f"{api_key}:{dataset_key}"):
-            logging.info(f'Invalid dataset key is present in {api_key}\'s metadata. Skipping.')
-
-            logging.info(f"{api_key}:{dataset_key}")
-            continue
-
-        dataset = dataset_storage.get_file_metadata(f"{api_key}:{dataset_key}")
-        dataset_info.append({
-            'key': dataset_key,
-            'name': dataset['name'],
-            'size': dataset['size'],
-            'entries': dataset['entries']
-        })
-
-    return jsonify(dataset_info), REQUEST_SUCCEEDED
-
-
-@data_views.route('/data/private/template/<template_name>', methods=['POST'])
+@data_views.route('/data/template/<template_name>', methods=['POST'])
 @require_api_key
 def register_dataset_from_template(template_name):
     api_key = request.headers.get('authkey')
-    if not api_key:
-        _, api_key, _ = is_valid_auth(None, request.cookies.get('session'))
 
-    api_key, _ = api_key
+    _, metadata_package, _ = is_valid_auth(api_key, request.cookies.get('session'))
+
+    api_key, _ = metadata_package
 
     if dataset_storage.exists(f"{api_key}:{template_name}"):
         return {'error': 'Dataset already exists'}, REQUEST_CONFLICT
@@ -244,14 +214,45 @@ def register_dataset_from_template(template_name):
     return {'info': 'Dataset registered'}, REQUEST_CREATED
 
 
-@data_views.route('/data/private/<dataset_key>', methods=['GET'])
+@data_views.route('/data/summary', methods=['GET'])
+@require_api_key
+def list_private_datasets():
+    api_key = request.headers.get('authkey')
+
+    _, metadata_package, _ = is_valid_auth(api_key, request.cookies.get('session'))
+
+    api_key, metadata = metadata_package
+
+    dataset_keys = metadata['dataset_keys']
+
+    dataset_info = []
+
+    for dataset_key in dataset_keys:
+        if not dataset_storage.exists(f"{api_key}:{dataset_key}"):
+            logging.info(f'Invalid dataset key is present in {api_key}\'s metadata. Skipping.')
+
+            logging.info(f"{api_key}:{dataset_key}")
+            continue
+
+        dataset = dataset_storage.get_file_metadata(f"{api_key}:{dataset_key}")
+        dataset_info.append({
+            'key': dataset_key,
+            'name': dataset['name'],
+            'size': dataset['size'],
+            'entries': dataset['entries']
+        })
+
+    return jsonify(dataset_info), REQUEST_SUCCEEDED
+
+
+@data_views.route('/data/<dataset_key>', methods=['GET'])
 @require_api_key
 def get_private_dataset(dataset_key):
     api_key = request.headers.get('authkey')
-    if not api_key:
-        _, api_key, _ = is_valid_auth(None, request.cookies.get('session'))
 
-    api_key, _ = api_key
+    _, metadata_package, _ = is_valid_auth(api_key, request.cookies.get('session'))
+
+    api_key, _ = metadata_package
 
     dataset = dataset_storage.get_file(f"{api_key}:{dataset_key}")
 
