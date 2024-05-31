@@ -1,15 +1,15 @@
 import os
 import logging
 
-from flask import Blueprint, current_app, request, jsonify
+from flask import Blueprint, current_app, request, jsonify, current_app
 from routes.helpers.submodules.auth import require_api_key, is_valid_auth
 
 from routes.helpers.submodules import data_proc, layers, utils
 from routes.helpers.submodules.worker import data_info
 from routes.helpers.submodules.storage import StorageInterface, RedisFileStorage
 
-from redis import Redis
 from rq import Queue
+from redis import Redis
 
 # Configuration for Redis connection
 redis_host: str = 'localhost'
@@ -201,8 +201,7 @@ def register_dataset_from_template(template_name, api_key):
                                 'entries': len(open(file_path).readlines())}
                                )
 
-    # TODO find a cleaner way to do this
-    redis = Redis(**REDIS_CONNECTION_INFO)
+    redis = current_app.config['DATABASE']
     redis.json().arrappend(f'api_key:{api_key}', '$.dataset_keys', template_name)
 
     return {'info': 'Dataset registered'}, REQUEST_CREATED
@@ -252,7 +251,7 @@ def delete_private_dataset(dataset_key, api_key):
 
     dataset_storage.delete_file(f"{api_key}:{dataset_key}")
 
-    redis = Redis(**REDIS_CONNECTION_INFO)
+    redis = current_app.config['DATABASE']
 
     index = redis.json().arrindex(f'api_key:{api_key}', '$.dataset_keys', dataset_key)[0]
 
