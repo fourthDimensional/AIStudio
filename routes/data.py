@@ -263,11 +263,30 @@ def get_private_dataset(dataset_key):
     return jsonify(dataset.decode('utf-8')), REQUEST_SUCCEEDED
 
 
-@data_views.route('/data/private/<dataset_key>', methods=['DELETE'])
+@data_views.route('/data/<dataset_key>', methods=['DELETE'])
 @require_api_key
 def delete_private_dataset(dataset_key):
-    pass
-    # TODO implement dataset deletion
+    api_key = request.headers.get('authkey')
+
+    _, metadata_package, _ = is_valid_auth(api_key, request.cookies.get('session'))
+
+    api_key, _ = metadata_package
+
+    if not dataset_storage.exists(f"{api_key}:{dataset_key}"):
+        return {'error': 'Dataset not found'}, REQUEST_CONFLICT
+
+    dataset_storage.delete_file(f"{api_key}:{dataset_key}")
+
+    redis = Redis(**REDIS_CONNECTION_INFO)
+
+    index = redis.json().arrindex(f'api_key:{api_key}', '$.dataset_keys', dataset_key)[0]
+
+    if index == -1:
+        return {'error': 'Dataset not found in metadata'}, REQUEST_CONFLICT
+
+    redis.json().arrpop(f'api_key:{api_key}', '$.dataset_keys', index)
+
+    return {'info': 'Dataset deleted'}, REQUEST_SUCCEEDED
 
 
 @data_views.route('/data/information', methods=['POST'])
