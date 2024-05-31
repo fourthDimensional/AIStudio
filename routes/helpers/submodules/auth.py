@@ -202,11 +202,11 @@ def is_valid_auth(api_key: str, session_token: str) -> bool:
         if session_token is not None:
             logging.info('API KEY is invalid, checking for session token')
             if not is_valid_session_token(session_token):
-                return None, None, ({'error': 'Invalid Session Token'}, 401)
+                return None, (None, None), ({'error': 'Invalid Session Token'}, 401)
             api_key = redis_client.json().get(f"session_token:{session_token}", '$.apikey')[0]
             logging.info('Session Token verified')
         else:
-            return None, None, ({'error': 'Invalid API Key'}, 401)
+            return None, (None, None), ({'error': 'Invalid API Key'}, 401)
 
     return True, (api_key, redis_client.json().get(f'api_key:{api_key}')), None
 

@@ -179,8 +179,8 @@ def list_datasets():
 @require_api_key
 def list_private_datasets():
     api_key = request.headers.get('authkey')
-    if not api_key:
-        _, api_key, _ = is_valid_auth(None, request.cookies.get('session'))
+
+    _, api_key, _ = is_valid_auth(api_key, request.cookies.get('session'))
 
     api_key, metadata = api_key
 
