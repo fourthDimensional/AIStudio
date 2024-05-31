@@ -158,7 +158,7 @@ def verify_data_integrity():
     return {}, REQUEST_NOT_IMPLEMENTED
 
 
-@data_views.route('/data/template/summary', methods=['GET'])
+@data_views.route('/data/template/list', methods=['GET'])
 @require_api_key
 def list_datasets():
     datasets = []
@@ -214,7 +214,7 @@ def register_dataset_from_template(template_name):
     return {'info': 'Dataset registered'}, REQUEST_CREATED
 
 
-@data_views.route('/data/summary', methods=['GET'])
+@data_views.route('/data/list', methods=['GET'])
 @require_api_key
 def list_private_datasets():
     api_key = request.headers.get('authkey')
