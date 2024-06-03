@@ -265,15 +265,8 @@ def delete_private_dataset(dataset_key, api_key):
 
 @data_views.route('/data/information', methods=['POST'])
 @require_api_key
-def start_data_processing():
-    api_key = request.headers.get('authkey')
-    if not api_key: # checks if session token was provided instead
-        _, api_key, _ = is_valid_auth(None, request.headers.get('session')) # Uses one to get the other, because
-        # the API key is needed to store the result
-
-    api_key, _ = api_key # metadata is unneeded
-
-    job = redis_queue.enqueue(data_info.generate_profile_report, 'aids_classification_small', api_key, REDIS_CONNECTION_INFO)
+def start_data_processing(api_key):
+    job = redis_queue.enqueue(data_info.generate_profile_report, 'classification_small', api_key, REDIS_CONNECTION_INFO)
     return jsonify({'info': 'Data processing started', 'job_id': job.id}), REQUEST_CREATED
 
 
