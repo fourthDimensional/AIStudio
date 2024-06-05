@@ -201,3 +201,8 @@ def encode_file(given_file):
 
 def decode_file(given_file):
     return base64.b64decode(given_file.encode('utf-8'))
+
+class RedisModelStorage:
+    def __init__(self, redis_connection: Redis, key_prefix: str = 'model'):
+        self.redis_connection = redis_connection
+        self.key_prefix = key_prefix

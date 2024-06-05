@@ -42,7 +42,17 @@ def create_model(file_path, name, visual_name, network_type):
     return {'info': 'Model created successfully'}, model
 
 
+class ModelWrapper:
+    pass
 
+class DataProcessingEngine:
+    pass
+
+class HyperparameterManager:
+    pass
+
+class LayerManipulator:
+    pass
 
 
 class Model:

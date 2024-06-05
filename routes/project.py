@@ -6,17 +6,6 @@ import logging
 
 import os
 
-# Configuration for Redis connection
-redis_host: str = 'localhost'
-redis_port: int = 6379
-redis_db: int = 0
-
-REDIS_CONNECTION_INFO = {
-    'host': os.getenv('REDIS_HOST', redis_host),
-    'port': int(os.getenv('REDIS_PORT', str(redis_port))),
-    'decode_responses': True
-}
-
 REQUEST_SUCCEEDED = 200
 REQUEST_CREATED = 201
 
@@ -35,11 +24,8 @@ logger = logging.getLogger(__name__)
 project = Blueprint('project', __name__)
 
 @require_api_key
-@project.route('/project', methods=['POST'])
-def create_project():
-    api_key = request.headers.get(AUTHKEY_HEADER)
-    project_name = request.form.get('name')
-
+@project.route('/project/<project_id>', methods=['POST'])
+def create_project(project_id):
     # create new project
 
     # register project in database
@@ -49,31 +35,29 @@ def create_project():
     return error, REQUEST_CREATED
 
 @require_api_key
-@project.route('/project', methods=['DELETE'])
-def delete_project():
-    api_key = request.headers.get(AUTHKEY_HEADER)
-    project_id = request.form.get('id')
-
+@project.route('/project/<project_id>', methods=['DELETE'])
+def delete_project(project_id):
     # delete project
 
     return {'info': 'Successfully deleted the project'}
 
 @require_api_key
-@project.route('/project', methods=['GET'])
-def get_project():
-    api_key = request.headers.get(AUTHKEY_HEADER)
-    project_id = request.form.get('id')
-
+@project.route('/project/<project_id>', methods=['GET'])
+def get_project(project_id):
     # return project information
 
-    return _, REQUEST_SUCCEEDED
+    return {}, REQUEST_SUCCEEDED
 
 @require_api_key
-@project.route('/projects', methods=['GET'])
+@project.route('/project/list', methods=['GET'])
 def list_projects():
-    api_key = request.headers.get(AUTHKEY_HEADER)
-    project_id = request.form.get('id')
-
     # return list of projects
 
-    return _, REQUEST_SUCCEEDED
+    return {}, REQUEST_SUCCEEDED
+
+@require_api_key
+@project.route('/project/<project_id>', methods=['PUT'])
+def update_project_settings(project_id):
+    # update project settings
+
+    return {}, REQUEST_SUCCEEDED

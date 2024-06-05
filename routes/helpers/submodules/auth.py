@@ -10,6 +10,14 @@ from functools import wraps, lru_cache
 
 from redis import Redis, RedisError
 
+def generate_api_key() -> str:
+    """
+    Generates a secure, random API key.
+
+    :return: A 32-character hexadecimal string representing the generated API key.
+    """
+    return secrets.token_hex(16)
+
 # Configuration for Redis connection
 redis_host: str = 'localhost'
 redis_port: int = 6379
@@ -26,13 +34,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 SESSION_TOKEN_TTL: int = 60 * 60 * 24 * 7  # 1 week in seconds
 
-def generate_api_key() -> str:
-    """
-    Generates a secure, random API key.
 
-    :return: A 32-character hexadecimal string representing the generated API key.
-    """
-    return secrets.token_hex(16)
 
 
 def save_api_key(api_key: str, env: str, first_name: str, last_name: str, email: str) -> str:
