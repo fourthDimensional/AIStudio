@@ -2,6 +2,18 @@ from redis import Redis
 import base64
 import os
 
+"""
+Up-to-date File Storage Code, currently being written.
+
+Needs to be integrated into direct connections to Redis across the codebase.
+
+Currently being used to store datasets for users, and will be used for other files.
+
+Future Plans:
+- Implement a more secure way to store files
+- Implement a codebase wide way to consistently connection to Redis for misc. usage.
+"""
+
 class StorageInterface:
     """
     Interface for storing and accessing data from different sources. Composition based.
@@ -90,70 +102,6 @@ class StorageInterface:
         return self.implementation.finish_upload(file_id)
 
 
-# class DatasetAccessInterface:
-#     """
-#     Interface for accessing datasets from different sources. Composition based.
-#     """
-#     def __init__(self, dataset_id, chunk_size=1000 * 1000 * 256):
-#         """
-#         Constructor for the DatasetAccessInterface class.
-#
-#         :param chunk_size: The size of the chunks to create.
-#         """
-#         self.id = dataset_id
-#         self.chunk_size = chunk_size
-#
-#     def get_dataset_metadata(self, access_point):
-#         """
-#         Get metadata for the dataset.
-#
-#         :return: Metadata for the dataset.
-#         """
-#         return access_point.get_file_metadata(self.id)
-#
-#
-#     def get_chunk(self, access_point, key):
-#         """
-#         Get a chunk of the dataset.
-#
-#         :param access_point:
-#         :param key: The key of the chunk to get.
-#         :return: The chunk of the dataset.
-#         """
-#         return access_point.get_chunk(self.id, self.chunk_keys[key])
-#
-#     def get_chunk_keys(self):
-#         """
-#         Get the keys of the chunks of the dataset.
-#
-#         :return: The keys of the chunks of the dataset.
-#         """
-#         return list(self.chunk_keys.keys())
-#
-#     def get_chunk_addresses(self):
-#         """
-#         Get the addresses of the chunks of the dataset.
-#
-#         :return: The addresses of the chunks of the dataset.
-#         """
-#         return list(self.chunk_keys.values())
-#
-#     def get_chunk_count(self):
-#         """
-#         Get the number of chunks in the dataset.
-#
-#         :return: The number of chunks in the dataset.
-#         """
-#         return len(self.chunk_keys)
-#
-#     def get_chunk_size(self):
-#         """
-#         Get the size of the chunks of the dataset.
-#
-#         :return: The size of the chunks of the dataset.
-#         """
-#         return self.chunk_size
-
 class RedisFileStorage:
     def __init__(self, redis_connection: Redis, key_prefix: str = 'file'):
         self.redis_connection = redis_connection
@@ -184,6 +132,7 @@ class RedisFileStorage:
     def exists(self, file_id):
         return self.redis_connection.exists(f'{self.key_prefix}:{file_id}:meta')
 
+    # TODO Implement Chunked Dataset Transfer
     def get_chunk(self, file_id, chunk_address):
         pass
 

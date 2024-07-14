@@ -1,6 +1,19 @@
 import difflib
 from typing import List
 
+"""
+Up-to-date Grouping Code
+
+Currently does not need modification
+
+Has reasonable test coverage
+
+Future Plans:
+- Implement more advanced similarity algorithms
+    - Only has string similarity for now
+- Add support for grouping based on multiple criteria
+- Improve performance by optimizing the grouping algorithm
+"""
 
 class SimilarityGrouper:
     def __init__(self, threshold=0.8):

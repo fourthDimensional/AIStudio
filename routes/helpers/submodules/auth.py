@@ -10,6 +10,20 @@ from functools import wraps, lru_cache
 
 from redis import Redis, RedisError
 
+"""
+Up-to-date Authentication Code
+
+Currently does not need modification
+
+Has reasonable test coverage
+
+Future Plans:
+- Implement a more secure way to store API keys
+- Stop directly using redis connection information. Use some sort of interface to connect to redis
+- Implement a more secure way to store session tokens
+"""
+
+
 def generate_api_key() -> str:
     """
     Generates a secure, random API key.

@@ -4,6 +4,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+"""
+Legacy Code
+
+Currently being transitioned to new refactored layer and model classes.
+
+Should be removed once the transition is complete and is no longer in use.
+"""
+
 class Layer(ABC):
     def __init__(self):
         self.name = 'default'

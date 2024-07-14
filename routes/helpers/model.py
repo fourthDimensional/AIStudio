@@ -13,6 +13,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+"""
+Very old legacy code
+
+Needs to be transitioned into the new model compilation and model wrapper classes
+"""
 
 def create_model(file_path, name, visual_name, network_type):
     valid_network_types = ["regression", "classification"]
