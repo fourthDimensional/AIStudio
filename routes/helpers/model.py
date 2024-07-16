@@ -187,7 +187,6 @@ class Model:
 
         return self.layers[horizontal][position].update_layer_output(subsplit_size, new_horizontal, positional_offset)
 
-    # TODO WHAT THE GENUINE FUCK IS THIS
     def verify_layers(self):
         dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
 
