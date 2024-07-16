@@ -1,6 +1,26 @@
 import tensorflow as tf
 from class_registry import ClassRegistry
 
+"""
+Up-to-date Layer Registry and Class Definition Code
+
+Needs class definitions and implementations for the following layers:
+- Input
+- BatchNormalization
+- Dense
+- Dropout
+- GaussianNoise
+- Flatten
+- Activation
+- Embedding
+- Identity
+- LSTM
+- GRU
+
+Future Plans:
+- Add more layer types
+"""
+
 class LayerSkeleton:
     def __init__(self):
             self.layer_name = 'default'

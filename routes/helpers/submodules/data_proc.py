@@ -2,6 +2,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+"""
+Legacy Code
+
+Currently being transitioned to new refactored data processing and modification classes.
+
+Should be removed once the transition is complete and is no longer in use.
+"""
+
 class DataModification:
     def process(self, dataframe):
         raise NotImplementedError
