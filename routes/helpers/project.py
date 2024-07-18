@@ -1,6 +1,21 @@
 import secrets
+import os
 from routes.helpers.compiler import ModelCompiler
 from routes.helpers.training import TrainingConfigPackager
+
+from redis import Redis
+
+# Configuration for Redis connection
+redis_host: str = 'localhost'
+redis_port: int = 6379
+redis_db: int = 0
+
+# Create a Redis connection using environment variables
+redis_client = Redis(
+    host=os.getenv('REDIS_HOST', redis_host),
+    port=int(os.getenv('REDIS_PORT', str(redis_port))),
+    decode_responses=True
+)
 
 """
 WIP Up-to-date Project Class Code
@@ -28,6 +43,9 @@ class Project:
 
         self.model_compiler: ModelCompiler = model_compiler
         self.training_config_packager: TrainingConfigPackager = training_config_packager
+
+    def init_training_history(self):
+        redis_client.json().set(f"training_history:{self.training_history_key}", '$', [])
 
     def serialize(self):
         return {
