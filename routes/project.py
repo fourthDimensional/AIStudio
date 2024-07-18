@@ -84,7 +84,7 @@ def delete_project(project_id, api_key):
         if existing_project is None:
             return {'error': 'Project does not exist'}, BAD_REQUEST
         redis_client.delete(f"project:{project_id}")
-        redis_client.json().arrpop(f"api_key:{api_key}", '$.project_keys', project_id)
+        redis_client.json().arrpop(f"api_key:{api_key}", '$.project_keys', redis_client.json().arrindex(f"api_key:{api_key}", '$.project_keys', project_id)[0])
     except Exception as error:
         logging.error(f'Failed to delete project from Redis, {error}')
         return {'error': 'A database connection error occurred, project has not been deleted'}, BAD_REQUEST
@@ -93,9 +93,18 @@ def delete_project(project_id, api_key):
 
 @project.route('/project/<project_id>', methods=['GET'])
 @require_api_key
-def get_project(project_id):
+def get_project(project_id, api_key):
+    try:
+        if redis_client.json().arrindex(f"api_key:{api_key}", '$.project_keys', project_id) is None:
+            return {'error': 'Project does not exist'}, BAD_REQUEST
+        existing_project = redis_client.json().get(f"project:{project_id}")
+        if existing_project is None:
+            return {'error': 'Project does not exist'}, BAD_REQUEST
+    except Exception as error:
+        logging.error(f'Failed to retrieve project from Redis, {error}')
+        return {'error': 'A database connection error occurred, project has not been retrieved'}, BAD_REQUEST
 
-    return {}, REQUEST_SUCCEEDED
+    return existing_project, REQUEST_SUCCEEDED
 
 @project.route('/project/list', methods=['GET'])
 @require_api_key
