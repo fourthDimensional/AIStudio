@@ -263,6 +263,7 @@ def delete_private_dataset(dataset_key, api_key):
     return {'info': 'Dataset deleted'}, REQUEST_SUCCEEDED
 
 
+# TODO Deprecated function remove this because it's a proof of concept
 @data_views.route('/data/information', methods=['POST'])
 @require_api_key
 def start_data_processing(api_key):
