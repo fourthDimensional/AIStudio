@@ -193,6 +193,8 @@ class DataProcessingEngine:
         Returns:
             tuple: A tuple containing the fields dataframe and the labels dataframe.
         """
+        data = self.process_data(data)
+
         fields = data.drop(columns=self.label_columns)
         labels = data[self.label_columns]
         return fields, labels
