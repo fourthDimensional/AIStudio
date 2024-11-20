@@ -91,7 +91,7 @@ def generate_key():
 @app.route('/authenticated', methods=['GET'])
 @require_api_key
 def authenticated():
-    return jsonify({'message': 'API Key verified'}), 200
+    return jsonify({'message': 'API Key verified and passed through'}), 200
 
 
 @app.route('/login', methods=['POST'])

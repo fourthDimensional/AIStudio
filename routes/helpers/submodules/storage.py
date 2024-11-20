@@ -108,6 +108,9 @@ class RedisFileStorage:
         self.key_prefix = key_prefix
 
     def get_file(self, file_id):
+        if not self.redis_connection.exists(f'{self.key_prefix}:{file_id}:meta'):
+            return None
+
         if not self.redis_connection.json().get(f'{self.key_prefix}:{file_id}:meta', '$.status')[0] == 'uploaded':
             return None
 

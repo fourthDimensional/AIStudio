@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split
 
 from routes.helpers.submodules import data_proc, layers, utils
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -48,16 +49,278 @@ def create_model(file_path, name, visual_name, network_type):
 
 
 class ModelWrapper:
-    pass
+    """
+    A wrapper class for the model that contains the data processing engine, hyperparameter manager, and layer manipulator.
+
+    Attributes:
+        data_processing_engine (DataProcessingEngine): Handles the data modification pipeline.
+        hyperparameter_manager (HyperparameterManager): Manages hyperparameters for layers, data modifications, and optimization algorithms.
+        layer_manipulator (LayerManipulator): Keeps track of the current layer structure.
+    """
+
+    def __init__(self, data_processing_engine, hyperparameter_manager, layer_manipulator):
+        """
+        Initializes the ModelWrapper with the given components.
+
+        Args:
+            data_processing_engine (DataProcessingEngine): The data processing engine.
+            hyperparameter_manager (HyperparameterManager): The hyperparameter manager.
+            layer_manipulator (LayerManipulator): The layer manipulator.
+        """
+        self.data_processing_engine = data_processing_engine
+        self.hyperparameter_manager = hyperparameter_manager
+        self.layer_manipulator = layer_manipulator
+
+    def compile_model(self, compiler):
+        """
+        Compiles the model using the given compiler.
+
+        Args:
+            compiler (ModelCompiler): The model compiler to use.
+        """
+        pass
+
+    def serialize(self):
+        """
+        Serializes the model wrapper for storage or transmission.
+        """
+        pass
+
+    def deserialize(self, data):
+        """
+        Deserializes the model wrapper from stored data.
+
+        Args:
+            data (dict): The data to deserialize from.
+        """
+        pass
 
 class DataProcessingEngine:
-    pass
+    """
+    Handles the data modification pipeline.
+
+    Attributes:
+        modifications (list): A list of data modifications to apply.
+        input_fields (list): A list of input fields from the dataset.
+        label_columns (list): A list of label columns from the dataset.
+    """
+
+    def __init__(self):
+        """
+        Initializes the DataProcessingEngine with an empty list of modifications, input fields, and label columns.
+        """
+        self.modifications = []
+        self.input_fields = []
+        self.label_columns = []
+
+    def add_modification(self, modification):
+        """
+        Adds a data modification to the pipeline.
+
+        Args:
+            modification: The data modification to add.
+        """
+        self.modifications.append(modification)
+
+    def process_data(self, data):
+        """
+        Processes the data through the modification pipeline.
+
+        Args:
+            data: The data to process.
+        """
+        inputs = None
+        fields = None
+
+        for modification in self.modifications:
+            data = modification.apply(data)
+        return data
+
+    def clear_modifications(self):
+        """
+        Clears all data modifications from the pipeline.
+        """
+        self.modifications = []
+
+    def set_input_fields(self, dataframe_head):
+        """
+        Sets the input fields from the head of the dataset dataframe.
+
+        Args:
+            dataframe_head (pandas.DataFrame): The head of the dataset dataframe.
+        """
+        self.input_fields = dataframe_head.columns.tolist()
+
+    def add_label_column(self, column):
+        """
+        Adds a specific column as a label.
+
+        Args:
+            column (str): The column to add as a label.
+        """
+        if column in self.input_fields and column not in self.label_columns:
+            self.label_columns.append(column)
+
+    def add_label_columns(self, columns):
+        """
+        Adds a list of columns as labels.
+
+        Args:
+            columns (list): The list of columns to add as labels.
+        """
+        for column in columns:
+            self.add_label_column(column)
+
+    def add_label_columns_by_regex(self, regex):
+        """
+        Adds columns as labels based on a regex expression.
+
+        Args:
+            regex (str): The regex expression to match column names.
+        """
+        pattern = re.compile(regex)
+        for column in self.input_fields:
+            if pattern.match(column):
+                self.add_label_column(column)
+
+    def separate_labels(self, data):
+        """
+        Separates the labels from the data.
+
+        Args:
+            data (pandas.DataFrame): The data to separate labels from.
+
+        Returns:
+            tuple: A tuple containing the fields dataframe and the labels dataframe.
+        """
+        fields = data.drop(columns=self.label_columns)
+        labels = data[self.label_columns]
+        return fields, labels
+
+    def separate_labels_with_split(self, data, test_size=0.2, random_state=None):
+        """
+        Separates the labels from the data and performs a train-test split.
+
+        Args:
+            data (pandas.DataFrame): The data to separate labels from.
+            test_size (float): The proportion of the dataset to include in the test split.
+            random_state (int): Controls the shuffling applied to the data before applying the split.
+
+        Returns:
+            tuple: A tuple containing the train and test dataframes for fields and labels.
+        """
+
+        fields, labels = self.separate_labels(data)
+        fields_train, fields_test, labels_train, labels_test = train_test_split(
+            fields, labels, test_size=test_size, random_state=random_state
+        )
+        return fields_train, fields_test, labels_train, labels_test
 
 class HyperparameterManager:
-    pass
+    """
+    Manages hyperparameters for layers, data modifications, and optimization algorithms.
+
+    Attributes:
+        hyperparameters (dict): A dictionary of hyperparameters.
+    """
+
+    def __init__(self):
+        """
+        Initializes the HyperparameterManager with an empty dictionary of hyperparameters.
+        """
+        self.hyperparameters = {}
+
+    def set_hyperparameter(self, name, value):
+        """
+        Sets a hyperparameter.
+
+        Args:
+            name (str): The name of the hyperparameter.
+            value: The value of the hyperparameter.
+        """
+        pass
+
+    def get_hyperparameter(self, name):
+        """
+        Gets the value of a hyperparameter.
+
+        Args:
+            name (str): The name of the hyperparameter.
+
+        Returns:
+            The value of the hyperparameter.
+        """
+        pass
+
+    def list_hyperparameters(self):
+        """
+        Lists all hyperparameters.
+
+        Returns:
+            dict: A dictionary of all hyperparameters.
+        """
+        pass
+
+    def clear_hyperparameters(self):
+        """
+        Clears all hyperparameters.
+        """
+        pass
+
 
 class LayerManipulator:
-    pass
+    """
+    Keeps track of the current layer structure.
+
+    Attributes:
+        layers (dict): A dictionary of layers in the model, stored in a two-dimensional form.
+    """
+
+    def __init__(self):
+        """
+        Initializes the LayerManipulator with an empty dictionary of layers.
+        """
+        self.layers = {}
+
+    def add_layer(self, layer, x_position, y_position):
+        """
+        Adds a layer to the model at the specified position.
+
+        Args:
+            layer: The layer to add.
+            x_position (int): The x-coordinate of the layer.
+            y_position (int): The y-coordinate of the layer.
+        """
+        if x_position not in self.layers:
+            self.layers[x_position] = {}
+        self.layers[x_position][y_position] = layer
+
+    def remove_layer(self, x_position, y_position):
+        """
+        Removes a layer from the model at the specified position.
+
+        Args:
+            x_position (int): The x-coordinate of the layer.
+            y_position (int): The y-coordinate of the layer.
+        """
+        if x_position in self.layers:
+            if y_position in self.layers[x_position]:
+                del self.layers[x_position][y_position]
+
+    def get_layers(self):
+        """
+        Gets the dictionary of layers in the model.
+
+        Returns:
+            dict: The dictionary of layers.
+        """
+        return self.layers
+
+    def clear_layers(self):
+        """
+        Clears all layers from the model.
+        """
+        self.layers = {}
 
 
 class Model:
@@ -192,7 +455,6 @@ class Model:
 
         return self.layers[horizontal][position].update_layer_output(subsplit_size, new_horizontal, positional_offset)
 
-    # TODO WHAT THE GENUINE FUCK IS THIS
     def verify_layers(self):
         dataframe_csv = utils.convert_to_dataframe(self.dataset_path)
 

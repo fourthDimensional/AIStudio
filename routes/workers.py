@@ -76,6 +76,7 @@ def get_job(job_id):
     job_info = {'id': job.id, 'created_at': job.created_at, 'enqueued_at': job.enqueued_at,
                 'ended_at': job.ended_at, 'origin': job.origin, 'result': job.return_value(),
                 'description': job.description, 'timeout': job.timeout,
-                'status': job.get_status(), 'meta': job.meta}
+                'status': job.get_status(), 'meta': job.meta,
+                'position': job.get_position()}
 
     return job_info, REQUEST_SUCCEEDED

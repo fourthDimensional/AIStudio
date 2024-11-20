@@ -1,4 +1,5 @@
 import logging
+from class_registry import ClassRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +11,7 @@ Currently being transitioned to new refactored data processing and modification 
 Should be removed once the transition is complete and is no longer in use.
 """
 
-class DataModification:
+class OldDataModification:
     def process(self, dataframe):
         raise NotImplementedError
 
@@ -18,7 +19,7 @@ class DataModification:
         raise NotImplementedError
 
 
-class ColumnDeletion(DataModification):
+class ColumnDeletion(OldDataModification):
     def __init__(self, column_name):
         self.type = 'ColumnDeletion'
         self.column_name = column_name
@@ -30,7 +31,7 @@ class ColumnDeletion(DataModification):
         return self.column_name
 
 
-class SpecifiedFeature(DataModification):
+class SpecifiedFeature(OldDataModification):
     def __init__(self, column_name):
         self.type = 'SpecifiedFeature'
         self.column_name = column_name
@@ -43,3 +44,25 @@ class SpecifiedFeature(DataModification):
 
     def __str__(self):
         return self.column_name
+
+"""
+Up-to-date Data Modification and Processing Class Code
+"""
+
+class DataModification:
+    def apply(self, dataframe):
+        raise NotImplementedError
+
+data_mod_registry = ClassRegistry[DataModification]()
+
+@data_mod_registry.register('column_deletion')
+class ColumnDeletion(DataModification):
+    def __init__(self, column_name):
+        self.column_name = column_name
+
+    def apply(self, dataframe):
+        return dataframe.drop(labels=self.column_name, axis=1)
+
+    def __str__(self):
+        return self.column_name
+

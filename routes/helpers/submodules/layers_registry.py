@@ -23,11 +23,16 @@ Future Plans:
 
 class LayerSkeleton:
     def __init__(self):
-            self.layer_name = 'default'
-            self.input_size = []
-            self.output_tensor_split = []
-            self.output_locations_x = []
-            self.output_locations_y = []
+        self.layer_name = 'default'
+        self.input_size = []
+        self.output_tensor_split = []
+        self.output_locations_x = []
+        self.output_locations_y = []
+
+        self.hyperparameters = {}
+
+    def instance_layer(self):
+        raise NotImplementedError
 
     def list_hyperparameters(self):
         raise NotImplementedError
@@ -45,7 +50,16 @@ layer_registry = ClassRegistry[LayerSkeleton]()
 
 @layer_registry.register('input')
 class InputLayer(LayerSkeleton):
-    pass
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.layer_name = 'input'
+        self.output_tensor_split = [1]
+        self.output_locations_x = [0]
+        self.output_locations_y = [0]
+
+    def instance_layer(self):
+        layer = tf.keras.layers.Input(shape=self.input_size)
+        return layer
 
 @layer_registry.register('batch_normalization')
 class BatchNormalizationLayer(LayerSkeleton):
@@ -53,7 +67,14 @@ class BatchNormalizationLayer(LayerSkeleton):
 
 @layer_registry.register('dense')
 class DenseLayer(LayerSkeleton):
-    pass
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.layer_name = 'dense'
+
+    def instance_layer(self):
+        layer = tf.keras.layers.Dense(**self.hyperparameters)
+        return layer
+
 
 @layer_registry.register('dropout')
 class DropoutLayer(LayerSkeleton):

@@ -194,15 +194,19 @@ def register_dataset_from_template(template_name, api_key):
     with open(file_path, 'rb') as f:
         file_data = f.read()
 
+
+    # TODO find a better way to access the database here
+    redis = current_app.config['DATABASE']
+    redis.json().arrappend(f'api_key:{api_key}', '$.dataset_keys', template_name)
+    id = redis.json().arrindex(f'api_key:{api_key}', '$.dataset_keys', template_name)[0]
+
     dataset_storage.store_file(f"{api_key}:{template_name}", file_data, {
                                 'status': 'uploaded',
                                 'name': template_name,
                                 'size': os.path.getsize(file_path),
-                                'entries': len(open(file_path).readlines())}
+                                'entries': len(open(file_path).readlines()),
+                                'id': id}
                                )
-
-    redis = current_app.config['DATABASE']
-    redis.json().arrappend(f'api_key:{api_key}', '$.dataset_keys', template_name)
 
     return {'info': 'Dataset registered'}, REQUEST_CREATED
 
@@ -226,7 +230,8 @@ def list_private_datasets(api_key, metadata):
             'key': dataset_key,
             'name': dataset['name'],
             'size': dataset['size'],
-            'entries': dataset['entries']
+            'entries': dataset['entries'],
+            'id': dataset['id'],
         })
 
     return jsonify(dataset_info), REQUEST_SUCCEEDED
