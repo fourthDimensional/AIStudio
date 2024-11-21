@@ -52,7 +52,7 @@ layer_manipulator.add_layer(input_layer, 0, 0)
 layer_manipulator.add_layer(dense_layer, 1, 0)
 print(layer_manipulator.get_layers())
 
-model_compiler = ModelCompiler()
+model_compiler = ModelCompiler('torch')
 config_packager = TrainingConfigPackager()
 
 new_model = model.ModelWrapper(dataprocessing_engine, hyperparameter_manager, layer_manipulator)
