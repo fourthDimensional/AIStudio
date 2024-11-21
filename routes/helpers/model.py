@@ -295,7 +295,11 @@ class LayerManipulator:
         """
         if x_position not in self.layers:
             self.layers[x_position] = {}
-        self.layers[x_position][y_position] = layer
+
+        # No subsplit, so output location is just the next layer with no y positional offset
+        output_location = [[0, x_position + 1, 0]]
+
+        self.layers[x_position][y_position] = {'layer': layer, 'outputs': output_location}
 
     def remove_layer(self, x_position, y_position):
         """

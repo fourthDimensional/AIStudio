@@ -1,7 +1,7 @@
 from redis import Redis
 from routes.helpers.submodules.storage import RedisFileStorage
 from routes.helpers.submodules.storage import StorageInterface
-from routes.helpers.compiler import TensorflowModelCompiler
+from routes.helpers.compiler import ModelCompiler
 from routes.helpers.training import TrainingConfigPackager
 import routes.helpers.model as model
 import routes.helpers.submodules.layers_registry as layers
@@ -28,9 +28,11 @@ dataset_storage = StorageInterface(RedisFileStorage(Redis(**REDIS_CONNECTION_INF
 api_key = '0e88f732d5f4d145130de7e210cd9a03'
 dataset_key = 'rainfall_amount_regression'
 
-data = dataset_storage.get_file(f"{api_key}:{dataset_key}")
-csv_buffer = BytesIO(data)
-dataframe = pd.read_csv(csv_buffer)
+# data = dataset_storage.get_file(f"{api_key}:{dataset_key}")
+# csv_buffer = BytesIO(data)
+# dataframe = pd.read_csv(csv_buffer)
+
+dataframe = pd.read_csv('static/datasets/rainfall_amount_regression.csv')
 
 layer_manipulator = model.LayerManipulator()
 hyperparameter_manager = model.HyperparameterManager()
@@ -47,10 +49,12 @@ print(dataprocessing_engine.separate_labels(dataframe))
 input_layer = layers.InputLayer()
 dense_layer = layers.DenseLayer()
 layer_manipulator.add_layer(input_layer, 0, 0)
-layer_manipulator.add_layer(dense_layer, 0, 0)
+layer_manipulator.add_layer(dense_layer, 1, 0)
 print(layer_manipulator.get_layers())
 
-model_compiler = TensorflowModelCompiler()
+model_compiler = ModelCompiler()
 config_packager = TrainingConfigPackager()
 
 new_model = model.ModelWrapper(dataprocessing_engine, hyperparameter_manager, layer_manipulator)
+
+model_compiler.compile_model(layer_manipulator.get_layers()).summary()
