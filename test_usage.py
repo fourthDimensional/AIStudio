@@ -10,6 +10,7 @@ import routes.helpers.submodules.data_proc as data_proc
 import os
 
 import pandas as pd
+import keras
 from io import BytesIO
 
 # Configuration for Redis connection
@@ -49,12 +50,29 @@ print(dataprocessing_engine.separate_labels(dataframe))
 input_layer = layers.InputLayer()
 dense_layer = layers.DenseLayer()
 layer_manipulator.add_layer(input_layer, 0, 0)
+layer_manipulator.forward_layer(0, 0)
 layer_manipulator.add_layer(dense_layer, 1, 0)
+layer_manipulator.point_layer(1, 0, 2, 0, 1)
+layer_manipulator.point_layer(1, 0, 2, 1, 1)
+layer_manipulator.add_layer(dense_layer, 2, 0)
+layer_manipulator.forward_layer(2, 0)
+layer_manipulator.add_layer(dense_layer, 2, 1)
+layer_manipulator.forward_layer(2, 1)
+layer_manipulator.add_layer(dense_layer, 3, 0)
+
+
 print(layer_manipulator.get_layers())
 
-model_compiler = ModelCompiler('torch')
+model_compiler = ModelCompiler()
 config_packager = TrainingConfigPackager()
 
 new_model = model.ModelWrapper(dataprocessing_engine, hyperparameter_manager, layer_manipulator)
 
-model_compiler.compile_model(layer_manipulator.get_layers()).summary()
+model = model_compiler.compile_model(layer_manipulator.get_layers())
+
+print(model_compiler.input_storage)
+
+model.summary()
+
+keras.utils.plot_model(model, "test.png")
+

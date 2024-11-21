@@ -1,4 +1,5 @@
 import tensorflow as tf
+import torch
 from class_registry import ClassRegistry
 
 """
@@ -20,6 +21,34 @@ Needs class definitions and implementations for the following layers:
 Future Plans:
 - Add more layer types
 """
+
+
+class UniversalSplitLayer:
+    def __init__(self, num_or_size_splits, axis=-1):
+        """
+        A universal split layer compatible with TensorFlow and PyTorch.
+
+        :param num_or_size_splits: Number or size of splits
+        :param axis: Axis to split along
+        """
+        self.num_or_size_splits = num_or_size_splits
+        self.axis = axis
+
+    def split(self, tensor):
+        """
+        Split the tensor into multiple parts.
+
+        :param tensor: Input tensor
+        :return: A list of split tensors
+        """
+        return tf.split(tensor, self.num_or_size_splits, axis=self.axis)
+
+        # if isinstance(tensor, tf.Tensor):
+        #     return tf.split(tensor, self.num_or_size_splits, axis=self.axis)
+        # elif isinstance(tensor, torch.Tensor):
+        #     return torch.split(tensor, self.num_or_size_splits, dim=self.axis)
+        # else:
+        #     raise TypeError(f"Unsupported tensor type: {type(tensor)}")
 
 
 class LayerSkeleton:
@@ -77,7 +106,7 @@ class DenseLayer(LayerSkeleton):
 
     def get_default_hyperparameter(self):
         return {
-            'units': 1,
+            'units': 2,
             'activation': 'relu'
         }
 

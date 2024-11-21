@@ -296,8 +296,8 @@ class LayerManipulator:
         if x_position not in self.layers:
             self.layers[x_position] = {}
 
-        # No subsplit, so output location is just the next layer with no y positional offset
-        output_location = [[0, x_position + 1, 0]]
+        # No subsplit, so output location is just the next layer with no y positional offset or subsplit
+        output_location = []
 
         self.layers[x_position][y_position] = {'layer': layer, 'outputs': output_location}
 
@@ -327,6 +327,31 @@ class LayerManipulator:
         Clears all layers from the model.
         """
         self.layers = {}
+
+    def point_layer(self, x_position, y_position, output_x_position, output_y_position, subsplit=1):
+        """
+        Points a layer to another layer in the model.
+
+        Args:
+            x_position (int): The x-coordinate of the layer to point from.
+            y_position (int): The y-coordinate of the layer to point from.
+            output_x_position (int): The x-coordinate of the layer to point to.
+            output_y_position (int): The y-coordinate of the layer to point to.
+            subsplit (int): The subsplit size
+        """
+        if x_position in self.layers and y_position in self.layers[x_position]:
+            self.layers[x_position][y_position]['outputs'].append([subsplit, output_x_position, output_y_position])
+
+    def forward_layer(self, x_position, y_position):
+        """
+        Forwards a layer to the next layer in the model.
+
+        Args:
+            x_position (int): The x-coordinate of the layer to forward.
+            y_position (int): The y-coordinate of the layer to forward.
+        """
+        if x_position in self.layers and y_position in self.layers[x_position]:
+            self.layers[x_position][y_position]['outputs'].append([0, x_position + 1, 0])
 
 
 class Model:
