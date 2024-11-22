@@ -7,6 +7,9 @@ import routes.helpers.model as model
 import routes.helpers.submodules.layers_registry as layers
 import routes.helpers.submodules.data_proc as data_proc
 
+from keras.optimizers import Adam
+from keras.losses import MeanSquaredError
+
 import os
 
 import pandas as pd
@@ -40,20 +43,22 @@ hyperparameter_manager = model.HyperparameterManager()
 dataprocessing_engine = model.DataProcessingEngine()
 
 column_deletion = data_proc.ColumnDeletion('date')
+column_deletion_2 = data_proc.ColumnDeletion('weather_condition')
 dataprocessing_engine.add_modification(column_deletion)
+dataprocessing_engine.add_modification(column_deletion_2)
 print(dataprocessing_engine.process_data(dataframe))
 dataprocessing_engine.set_input_fields(dataframe)
 print(dataprocessing_engine.input_fields)
 dataprocessing_engine.add_label_column('rainfall')
-print(dataprocessing_engine.separate_labels(dataframe))
+x, y = dataprocessing_engine.separate_labels(dataframe)
 
-input_layer = layers.InputLayer(input_size=4)
+input_layer = layers.InputLayer(input_size=3)
 dense_layer = layers.DenseLayer()
 layer_manipulator.add_layer(input_layer, 0, 0)
 layer_manipulator.forward_layer(0, 0)
 layer_manipulator.add_layer(dense_layer, 1, 0)
-layer_manipulator.point_layer(1, 0, 2, 0, 1)
-layer_manipulator.point_layer(1, 0, 2, 1, 1)
+layer_manipulator.point_layer(1, 0, 2, 0, 5)
+layer_manipulator.point_layer(1, 0, 2, 1, 5)
 layer_manipulator.add_layer(dense_layer, 2, 0)
 layer_manipulator.forward_layer(2, 0)
 layer_manipulator.add_layer(dense_layer, 2, 1)
@@ -61,7 +66,6 @@ layer_manipulator.point_layer(2, 1, 4, 0, 0)
 layer_manipulator.add_layer(dense_layer, 3, 0)
 layer_manipulator.forward_layer(3, 0)
 layer_manipulator.add_layer(dense_layer, 4, 0)
-
 
 print(layer_manipulator.get_layers())
 
@@ -72,9 +76,11 @@ new_model = model.ModelWrapper(dataprocessing_engine, hyperparameter_manager, la
 
 model = model_compiler.compile_model(layer_manipulator.get_layers())
 
+model.compile(optimizer=Adam(), loss=MeanSquaredError())
+model.fit(x, y, epochs=100)
+
 print(model_compiler.input_storage)
 
 model.summary()
 
-keras.utils.plot_model(model, "test.png")
-
+keras.utils.plot_model(model, "test.png", rankdir='LR', show_shapes=True)

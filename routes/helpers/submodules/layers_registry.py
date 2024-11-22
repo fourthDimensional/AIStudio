@@ -84,8 +84,8 @@ class InputLayer(LayerSkeleton):
 
         self.hyperparameters['input_size'] = kwargs['input_size']
 
-    def instance_layer(self, input_size):
-        layer = tf.keras.layers.Input(shape=input_size)
+    def instance_layer(self, _previous_layer):
+        layer = tf.keras.layers.Input(shape=self.hyperparameters['input_size'])
         return layer
 
 
@@ -108,7 +108,7 @@ class DenseLayer(LayerSkeleton):
 
     def get_default_hyperparameters(self):
         return {
-            'units': 2,
+            'units': 10,
             'activation': 'relu'
         }
 
