@@ -64,10 +64,6 @@ class ModelCompiler:
 
         outputs = layer_object['outputs']
 
-        print(layer_object)
-        print(self.current_x)
-        print(self.current_y)
-
         # Subsplit is present
         if outputs:
             if outputs[0][0] > 0:
