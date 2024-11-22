@@ -66,7 +66,7 @@ class LayerSkeleton:
     def modify_hyperparameters(self):
         raise NotImplementedError
 
-    def get_default_hyperparameter(self):
+    def get_default_hyperparameters(self):
         raise NotImplementedError
 
     def suggested_hyperparameter(self):
@@ -100,10 +100,10 @@ class DenseLayer(LayerSkeleton):
         super().__init__()
         self.layer_name = 'dense'
 
-        self.hyperparameters = self.get_default_hyperparameters()
+        self.hyperparameters['units'] = kwargs['units']
 
     def instance_layer(self, previous_layer):
-        layer = tf.keras.layers.Dense(**self.hyperparameters)
+        layer = tf.keras.layers.Dense(units=self.hyperparameters['units'])
         return layer(previous_layer)
 
     def get_default_hyperparameters(self):
