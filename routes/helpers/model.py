@@ -196,7 +196,7 @@ class DataProcessingEngine:
         """
         data = self.process_data(data)
 
-        pattern = '|'.join([f'^{col}_' for col in self.label_columns])
+        pattern = '|'.join([f'^{col}' for col in self.label_columns])
 
         fields = data.drop(columns=data.filter(regex=pattern).columns)
         labels = data[data.filter(regex=pattern).columns]
