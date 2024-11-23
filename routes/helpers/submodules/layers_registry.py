@@ -6,9 +6,7 @@ from class_registry import ClassRegistry
 Up-to-date Layer Registry and Class Definition Code
 
 Needs class definitions and implementations for the following layers:
-- Input
 - BatchNormalization
-- Dense
 - Dropout
 - GaussianNoise
 - Flatten
@@ -111,6 +109,17 @@ class DenseLayer(LayerSkeleton):
             'units': 10,
             'activation': 'relu'
         }
+
+
+@layer_registry.register('batch_normalization')
+class BatchNormalizationLayer(LayerSkeleton):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.layer_name = 'batch_normalization'
+
+    def instance_layer(self, previous_layer):
+        layer = tf.keras.layers.BatchNormalization(axis=-1)
+        return layer(previous_layer)
 
 
 @layer_registry.register('dropout')

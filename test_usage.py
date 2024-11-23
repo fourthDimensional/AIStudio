@@ -9,6 +9,7 @@ import routes.helpers.submodules.data_proc as data_proc
 
 from keras.optimizers import Adam
 from keras.losses import MeanSquaredError
+from keras.metrics import BinaryAccuracy
 
 import os
 
@@ -36,35 +37,38 @@ dataset_key = 'rainfall_amount_regression'
 # csv_buffer = BytesIO(data)
 # dataframe = pd.read_csv(csv_buffer)
 
-dataframe = pd.read_csv('static/datasets/rainfall_amount_regression.csv')
+dataframe = pd.read_csv('static/datasets/aids_classification_small.csv')
 
 layer_manipulator = model.LayerManipulator()
 hyperparameter_manager = model.HyperparameterManager()
 dataprocessing_engine = model.DataProcessingEngine()
 
-column_deletion = data_proc.ColumnDeletion('date')
-column_deletion_2 = data_proc.ColumnDeletion('weather_condition')
-dataprocessing_engine.add_modification(column_deletion)
-dataprocessing_engine.add_modification(column_deletion_2)
 dataprocessing_engine.set_input_fields(dataframe)
-print(dataprocessing_engine.input_fields)
-dataprocessing_engine.add_label_column('rainfall')
+dataprocessing_engine.add_label_column('infected')
+
 x, y = dataprocessing_engine.separate_labels(dataframe)
 
-input_layer = layers.InputLayer(input_size=3)
-dense_layer = layers.DenseLayer(units=15)
+input_layer = layers.InputLayer(input_size=22)
+dense_layer = layers.DenseLayer(units=50)
+
 layer_manipulator.add_layer(input_layer, 0, 0)
 layer_manipulator.forward_layer(0, 0)
-layer_manipulator.add_layer(dense_layer, 1, 0)
-layer_manipulator.point_layer(1, 0, 2, 0, 0)
-layer_manipulator.point_layer(1, 0, 2, 1, 0)
+layer_manipulator.add_layer(layers.BatchNormalizationLayer(), 1, 0)
+layer_manipulator.forward_layer(1, 0)
 layer_manipulator.add_layer(dense_layer, 2, 0)
 layer_manipulator.forward_layer(2, 0)
-layer_manipulator.add_layer(dense_layer, 2, 1)
-layer_manipulator.point_layer(2, 1, 4, 0, 0)
 layer_manipulator.add_layer(dense_layer, 3, 0)
 layer_manipulator.forward_layer(3, 0)
-layer_manipulator.add_layer(dense_layer, 4, 0)
+layer_manipulator.add_layer(layers.DenseLayer(units=1), 4, 0)
+# layer_manipulator.point_layer(1, 0, 2, 0, 0)
+# layer_manipulator.point_layer(1, 0, 2, 1, 0)
+# layer_manipulator.add_layer(dense_layer, 2, 0)
+# layer_manipulator.forward_layer(2, 0)
+# layer_manipulator.add_layer(dense_layer, 2, 1)
+# layer_manipulator.point_layer(2, 1, 4, 0, 0)
+# layer_manipulator.add_layer(dense_layer, 3, 0)
+# layer_manipulator.forward_layer(3, 0)
+# layer_manipulator.add_layer(dense_layer, 4, 0)
 
 
 model_compiler = ModelCompiler()
@@ -72,12 +76,10 @@ config_packager = TrainingConfigPackager()
 
 new_model = model.ModelWrapper(dataprocessing_engine, hyperparameter_manager, layer_manipulator)
 
-
-
 model = model_compiler.compile_model(layer_manipulator.get_layers())
 
-# model.compile(optimizer=Adam(), loss=MeanSquaredError())
-# model.fit(x, y, epochs=100)
+model.compile(optimizer=Adam(), loss=MeanSquaredError(), metrics=[BinaryAccuracy()])
+model.fit(x, y, epochs=100, batch_size=64)
 
 print(model_compiler.input_storage)
 
