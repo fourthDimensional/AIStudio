@@ -54,6 +54,10 @@ class ModelCompiler:
 
     def _process_layer(self, layer_object, previous_layer):
         """Process a single layer and return its tensor."""
+        print(layer_object)
+        print(self.input_storage)
+        print(self.current_x)
+        print(self.current_y)
         if isinstance(previous_layer, int):
             layer_tensor = layer_object['layer'].instance_layer(previous_layer)
         elif len(self.input_storage[self.current_x][self.current_y]) > 1:
@@ -64,8 +68,8 @@ class ModelCompiler:
 
         outputs = layer_object['outputs']
 
-        # Subsplit is present
         if outputs:
+            # Subsplit is present
             if outputs[0][0] > 0:
                 subsplit_dimensions = self._get_subsplit_dimensions(outputs)
                 splitter = UniversalSplitLayer(num_or_size_splits=subsplit_dimensions, axis=-1)
@@ -85,19 +89,19 @@ class ModelCompiler:
                     self.input_storage[positional_index][vertical_index].append(split_tensors_list[index])
                     index += 1
             else:
-                positional_index = outputs[0][1]
-                vertical_index = outputs[0][2]
+                for output in outputs:
+                    positional_index = output[1]
+                    vertical_index = output[2]
 
-                if positional_index not in self.input_storage:
-                    self.input_storage[positional_index] = {}
+                    if positional_index not in self.input_storage:
+                        self.input_storage[positional_index] = {}
 
-                if vertical_index not in self.input_storage[positional_index]:
-                    self.input_storage[positional_index][vertical_index] = []
+                    if vertical_index not in self.input_storage[positional_index]:
+                        self.input_storage[positional_index][vertical_index] = []
 
-                self.input_storage[positional_index][vertical_index].append(layer_tensor)
+                    self.input_storage[positional_index][vertical_index].append(layer_tensor)
         else:
-            # this is either a final or unconnected layer
-            pass
+            return layer_tensor
 
         return layer_tensor
 

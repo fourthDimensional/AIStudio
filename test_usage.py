@@ -56,16 +56,28 @@ dense_layer = layers.DenseLayer(units=15)
 layer_manipulator.add_layer(input_layer, 0, 0)
 layer_manipulator.forward_layer(0, 0)
 layer_manipulator.add_layer(dense_layer, 1, 0)
+layer_manipulator.point_layer(1, 0, 2, 0, 0)
+layer_manipulator.point_layer(1, 0, 2, 1, 0)
+layer_manipulator.add_layer(dense_layer, 2, 0)
+layer_manipulator.forward_layer(2, 0)
+layer_manipulator.add_layer(dense_layer, 2, 1)
+layer_manipulator.point_layer(2, 1, 4, 0, 0)
+layer_manipulator.add_layer(dense_layer, 3, 0)
+layer_manipulator.forward_layer(3, 0)
+layer_manipulator.add_layer(dense_layer, 4, 0)
+
 
 model_compiler = ModelCompiler()
 config_packager = TrainingConfigPackager()
 
 new_model = model.ModelWrapper(dataprocessing_engine, hyperparameter_manager, layer_manipulator)
 
+
+
 model = model_compiler.compile_model(layer_manipulator.get_layers())
 
-model.compile(optimizer=Adam(), loss=MeanSquaredError())
-model.fit(x, y, epochs=100)
+# model.compile(optimizer=Adam(), loss=MeanSquaredError())
+# model.fit(x, y, epochs=100)
 
 print(model_compiler.input_storage)
 
