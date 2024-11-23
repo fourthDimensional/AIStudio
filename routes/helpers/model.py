@@ -133,6 +133,7 @@ class DataProcessingEngine:
         fields = None
 
         for modification in self.modifications:
+            modification.adapt(data)
             data = modification.apply(data)
         return data
 
@@ -195,8 +196,10 @@ class DataProcessingEngine:
         """
         data = self.process_data(data)
 
-        fields = data.drop(columns=self.label_columns)
-        labels = data[self.label_columns]
+        pattern = '|'.join([f'^{col}_' for col in self.label_columns])
+
+        fields = data.drop(columns=data.filter(regex=pattern).columns)
+        labels = data[data.filter(regex=pattern).columns]
         return fields, labels
 
     def separate_labels_with_split(self, data, test_size=0.2, random_state=None):

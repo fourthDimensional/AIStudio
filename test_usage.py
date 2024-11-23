@@ -37,19 +37,21 @@ dataset_key = 'rainfall_amount_regression'
 # csv_buffer = BytesIO(data)
 # dataframe = pd.read_csv(csv_buffer)
 
-dataframe = pd.read_csv('static/datasets/aids_classification_small.csv')
+dataframe = pd.read_csv('static/datasets/rainfall_amount_regression.csv')
 
 layer_manipulator = model.LayerManipulator()
 hyperparameter_manager = model.HyperparameterManager()
 dataprocessing_engine = model.DataProcessingEngine()
 
+dataprocessing_engine.add_modification(data_proc.ColumnDeletion('date'))
+dataprocessing_engine.add_modification(data_proc.StringLookup('weather_condition'))
 dataprocessing_engine.set_input_fields(dataframe)
-dataprocessing_engine.add_label_column('infected')
+dataprocessing_engine.add_label_column('weather_condition')
 
 x, y = dataprocessing_engine.separate_labels(dataframe)
 
-input_layer = layers.InputLayer(input_size=22)
-dense_layer = layers.DenseLayer(units=50)
+input_layer = layers.InputLayer(input_size=4)
+dense_layer = layers.DenseLayer(units=5)
 
 layer_manipulator.add_layer(input_layer, 0, 0)
 layer_manipulator.forward_layer(0, 0)
@@ -59,7 +61,7 @@ layer_manipulator.add_layer(dense_layer, 2, 0)
 layer_manipulator.forward_layer(2, 0)
 layer_manipulator.add_layer(dense_layer, 3, 0)
 layer_manipulator.forward_layer(3, 0)
-layer_manipulator.add_layer(layers.DenseLayer(units=1), 4, 0)
+layer_manipulator.add_layer(layers.DenseLayer(units=3), 4, 0)
 # layer_manipulator.point_layer(1, 0, 2, 0, 0)
 # layer_manipulator.point_layer(1, 0, 2, 1, 0)
 # layer_manipulator.add_layer(dense_layer, 2, 0)
