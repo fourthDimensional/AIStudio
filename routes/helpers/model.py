@@ -71,9 +71,6 @@ class ModelWrapper:
         self.hyperparameter_manager = hyperparameter_manager
         self.layer_manipulator = layer_manipulator
 
-    def compile_model(self, compiler):
-        return compiler.compile_model(self.layer_manipulator.get_layers())
-
     def serialize(self):
         """
         Serializes the model wrapper for storage or transmission.

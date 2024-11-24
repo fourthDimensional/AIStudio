@@ -24,7 +24,9 @@ class ModelCompiler:
         self.current_x = 0
         self.current_y = 0
 
-    def compile_model(self, layers):
+    def compile_model(self, model_wrapper):
+        layers = model_wrapper.layer_manipulator.get_layers()
+
         self.input_storage = {'input': [], 0: {0: []}}
         self.current_x = 0
         self.current_y = 0
@@ -36,6 +38,8 @@ class ModelCompiler:
             input_layer, previous_layer = self._process_slice(layers[slice], input_layer, previous_layer)
             self.current_x += 1
             self.current_y = 0
+
+        keras.Model(inputs=input_layer, outputs=previous_layer).summary()
 
         return keras.Model(inputs=input_layer, outputs=previous_layer)
 
@@ -54,10 +58,6 @@ class ModelCompiler:
 
     def _process_layer(self, layer_object, previous_layer):
         """Process a single layer and return its tensor."""
-        print(layer_object)
-        print(self.input_storage)
-        print(self.current_x)
-        print(self.current_y)
         if isinstance(previous_layer, int):
             layer_tensor = layer_object['layer'].instance_layer(previous_layer)
         elif len(self.input_storage[self.current_x][self.current_y]) > 1:

@@ -16,6 +16,7 @@ import os
 import pandas as pd
 import keras
 from io import BytesIO
+import time
 
 # Configuration for Redis connection
 redis_host: str = 'localhost'
@@ -28,7 +29,14 @@ REDIS_CONNECTION_INFO = {
     'decode_responses': True
 }
 
-jobs.kill_all_workers(Redis(**REDIS_CONNECTION_INFO))
+REDIS_WORKER_CONNECTION_INFO = {
+    'host': os.getenv('REDIS_HOST', redis_host),
+    'port': int(os.getenv('REDIS_PORT', str(redis_port))),
+}
+
+# jobs.kill_all_workers(Redis(**REDIS_CONNECTION_INFO))
+
+job_manager = jobs.JobManager(Redis(**REDIS_WORKER_CONNECTION_INFO))
 
 dataset_storage = StorageInterface(RedisFileStorage(Redis(**REDIS_CONNECTION_INFO)))
 
@@ -80,12 +88,14 @@ config_packager = jobs.JobConfigPackager()
 
 new_model = model.ModelWrapper(dataprocessing_engine, hyperparameter_manager, layer_manipulator)
 
-model = new_model.compile_model(model_compiler)
+compile_job = job_manager.queue_compile_job(new_model, model_compiler)
+
+time.sleep(3)
+
+model = compile_job.return_value()
 
 model.compile(optimizer=Adam(), loss=MeanSquaredError(), metrics=[BinaryAccuracy()])
 model.fit(x, y, epochs=100, batch_size=11)
-
-print(model_compiler.input_storage)
 
 model.summary()
 
