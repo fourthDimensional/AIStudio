@@ -2,7 +2,7 @@ from redis import Redis
 from routes.helpers.submodules.storage import RedisFileStorage
 from routes.helpers.submodules.storage import StorageInterface
 from routes.helpers.compiler import ModelCompiler
-from routes.helpers.training import TrainingConfigPackager
+from routes.helpers.jobs import JobConfigPackager
 import routes.helpers.model as model
 import routes.helpers.submodules.layers_registry as layers
 import routes.helpers.submodules.data_proc as data_proc
@@ -76,7 +76,7 @@ layer_manipulator.add_layer(dense_layer, 4, 0)
 
 
 model_compiler = ModelCompiler()
-config_packager = TrainingConfigPackager()
+config_packager = JobConfigPackager()
 
 new_model = model.ModelWrapper(dataprocessing_engine, hyperparameter_manager, layer_manipulator)
 
