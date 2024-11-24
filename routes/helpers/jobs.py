@@ -12,19 +12,27 @@ Needs to be integrated into the training process across the codebase.
 Will be used to train models and manage training agents and package configs.
 """
 
-class TrainingConfigPackager:
+class JobConfigPackager:
     pass
 
-class TrainingConfig:
+class JobConfig:
     pass
 
-class TrainingAgent:
-    def __init__(self, redis_connection: Redis):
+class WorkerAgent:
+    def __init__(self, redis_connection: Redis, name: str, queue: Queue):
         self.redis_connection = redis_connection
+
+        self.name = name
+        self.queue = queue
 
     def kill(self):
         send_shutdown_command(self.redis_connection, self.name)
 
 
-class TrainingManager:
+class JobManager:
+    def __init__(self, redis_connection: Redis):
+        self.redis_connection = redis_connection
+
+        self.agents = {}
+
     pass
