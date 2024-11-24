@@ -35,4 +35,14 @@ class JobManager:
 
         self.agents = {}
 
-    pass
+        self.compile_queue = Queue('compiling', connection=self.redis_connection)
+        self.train_queue = Queue('training', connection=self.redis_connection)
+        self.inference_queue = Queue('inference', connection=self.redis_connection)
+        self.data_queue = Queue('data', connection=self.redis_connection)
+
+    def queue_compile_job(self, model_wrapper):
+        job = self.compile_queue.enqueue(model_wrapper)
+
+        time.sleep(1)
+
+        print(job.return_value())
