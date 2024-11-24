@@ -1,7 +1,7 @@
 import os
 
+import keras
 import tensorflow as tf
-import torch
 from class_registry import ClassRegistry
 
 """
@@ -22,11 +22,23 @@ Future Plans:
 - Add more layer types
 """
 
+class SplitLayer(keras.Layer):
+    def __init__(self, num_or_size_splits, axis=-1):
+        super(SplitLayer, self).__init__()
+        self.num_or_size_splits = num_or_size_splits
+        self.axis = axis
+
+    def call(self, inputs, **kwargs):
+        return tf.split(inputs, num_or_size_splits=self.num_or_size_splits, axis=self.axis)
+
 
 class UniversalSplitLayer:
     def __init__(self, num_or_size_splits, axis=-1):
         """
         A universal split layer compatible with TensorFlow and PyTorch.
+
+        This class will need to be passed in as a custom object when deserializing the model.
+        https://keras.io/guides/serialization_and_saving/
 
         :param num_or_size_splits: Number or size of splits
         :param axis: Axis to split along
@@ -35,23 +47,7 @@ class UniversalSplitLayer:
         self.axis = axis
 
     def split(self, tensor):
-        """
-        Split the tensor into multiple parts.
-
-        :param tensor: Input tensor
-        :return: A list of split tensors
-        """
-        if os.environ.get('KERAS_BACKEND') == 'tensorflow':
-            return tf.split(tensor, self.num_or_size_splits, axis=self.axis)
-        elif os.environ.get('KERAS_BACKEND') == 'torch':
-            return torch.split(tensor, self.num_or_size_splits, dim=self.axis)
-
-        # if isinstance(tensor, tf.Tensor):
-        #     return tf.split(tensor, self.num_or_size_splits, axis=self.axis)
-        # elif isinstance(tensor, torch.Tensor):
-        #     return torch.split(tensor, self.num_or_size_splits, dim=self.axis)
-        # else:
-        #     raise TypeError(f"Unsupported tensor type: {type(tensor)}")
+        return SplitLayer(num_or_size_splits=self.num_or_size_splits, axis=self.axis)(tensor)
 
 
 class LayerSkeleton:
@@ -95,7 +91,7 @@ class InputLayer(LayerSkeleton):
         self.hyperparameters['input_size'] = kwargs['input_size']
 
     def instance_layer(self, _previous_layer):
-        layer = tf.keras.layers.Input(shape=self.hyperparameters['input_size'])
+        layer = tf.keras.layers.Input(shape=(self.hyperparameters['input_size'],))
         return layer
 
 

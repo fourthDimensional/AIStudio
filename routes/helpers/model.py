@@ -72,7 +72,7 @@ class ModelWrapper:
         self.layer_manipulator = layer_manipulator
 
     def compile_model(self, compiler):
-        return compiler.compile(self.layer_manipulator.get_layers())
+        return compiler.compile_model(self.layer_manipulator.get_layers())
 
     def serialize(self):
         """
