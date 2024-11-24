@@ -80,7 +80,7 @@ config_packager = TrainingConfigPackager()
 
 new_model = model.ModelWrapper(dataprocessing_engine, hyperparameter_manager, layer_manipulator)
 
-model = model_compiler.compile_model(layer_manipulator.get_layers())
+model = new_model.compile_model(model_compiler)
 
 model.compile(optimizer=Adam(), loss=MeanSquaredError(), metrics=[BinaryAccuracy()])
 model.fit(x, y, epochs=100, batch_size=64)

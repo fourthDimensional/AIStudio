@@ -72,13 +72,7 @@ class ModelWrapper:
         self.layer_manipulator = layer_manipulator
 
     def compile_model(self, compiler):
-        """
-        Compiles the model using the given compiler.
-
-        Args:
-            compiler (ModelCompiler): The model compiler to use.
-        """
-        pass
+        return compiler.compile(self.layer_manipulator.get_layers())
 
     def serialize(self):
         """
