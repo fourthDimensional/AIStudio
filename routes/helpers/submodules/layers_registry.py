@@ -1,3 +1,5 @@
+import os
+
 import tensorflow as tf
 import torch
 from class_registry import ClassRegistry
@@ -39,7 +41,10 @@ class UniversalSplitLayer:
         :param tensor: Input tensor
         :return: A list of split tensors
         """
-        return tf.split(tensor, self.num_or_size_splits, axis=self.axis)
+        if os.environ.get('KERAS_BACKEND') == 'tensorflow':
+            return tf.split(tensor, self.num_or_size_splits, axis=self.axis)
+        elif os.environ.get('KERAS_BACKEND') == 'torch':
+            return torch.split(tensor, self.num_or_size_splits, dim=self.axis)
 
         # if isinstance(tensor, tf.Tensor):
         #     return tf.split(tensor, self.num_or_size_splits, axis=self.axis)
@@ -51,17 +56,24 @@ class UniversalSplitLayer:
 
 class LayerSkeleton:
     def __init__(self):
-        self.layer_name = 'default'
+        self.layer_name = 'skeleton'
 
         self.hyperparameters = {}
 
     def instance_layer(self, previous_layer):
         raise NotImplementedError
 
-    def list_hyperparameters(self):
-        raise NotImplementedError
+    def get_hyperparameters(self):
+        return self.hyperparameters
 
-    def modify_hyperparameters(self):
+    def modify_hyperparameters(self, hyperparameters):
+        for key, value in hyperparameters.items():
+            if key in self.hyperparameters:
+                self.hyperparameters[key] = value
+            else:
+                raise KeyError(f"Hyperparameter {key} not found in layer {self.layer_name}")
+
+    def get_hyperparameter_ranges(self):
         raise NotImplementedError
 
     def get_default_hyperparameters(self):
@@ -87,11 +99,6 @@ class InputLayer(LayerSkeleton):
         return layer
 
 
-@layer_registry.register('batch_normalization')
-class BatchNormalizationLayer(LayerSkeleton):
-    pass
-
-
 @layer_registry.register('dense')
 class DenseLayer(LayerSkeleton):
     def __init__(self, **kwargs):
@@ -107,7 +114,31 @@ class DenseLayer(LayerSkeleton):
     def get_default_hyperparameters(self):
         return {
             'units': 10,
-            'activation': 'relu'
+            'activation': 'relu',
+            'use_bias': True,
+            'kernel_initializer': 'glorot_uniform',
+            'bias_initializer': 'zeros',
+            'kernel_regularizer': None,
+            'bias_regularizer': None,
+            'activity_regularizer': None,
+            'kernel_constraint': None,
+            'bias_constraint': None,
+            'lora_rank': None,
+        }
+
+    def get_hyperparameter_ranges(self):
+        return {
+            'units': (1, 1_000_000_000),
+            'activation': ['relu', 'sigmoid', 'tanh', 'softmax', 'softplus', 'softsign', 'selu', 'elu', 'exponential', 'linear'],
+            'use_bias': [True, False],
+            'kernel_initializer': ['glorot_uniform', 'glorot_normal', 'he_normal', 'he_uniform', 'lecun_normal', 'lecun_uniform'],
+            'bias_initializer': ['zeros', 'ones', 'constant', 'uniform', 'normal', 'truncated_normal', 'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform', 'lecun_normal', 'lecun_uniform'],
+            'kernel_regularizer': {'type': 'regularizer'},
+            'bias_regularizer': {'type': 'regularizer'},
+            'activity_regularizer': {'type': 'regularizer'},
+            'kernel_constraint': {'type': 'constraint'},
+            'bias_constraint': {'type': 'constraint'},
+            'lora_rank': [None, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
 
 
