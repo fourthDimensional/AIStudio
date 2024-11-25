@@ -76,11 +76,13 @@ layer_manipulator.add_layer(input_layer, 0, 0)
 layer_manipulator.forward_layer(0, 0)
 layer_manipulator.add_layer(layers.BatchNormalizationLayer(), 1, 0)
 layer_manipulator.forward_layer(1, 0)
-layer_manipulator.add_layer(dense_layer, 2, 0)
+layer_manipulator.add_layer(layers.ReshapeLayer(target_shape=(1, 5)), 2, 0)
 layer_manipulator.forward_layer(2, 0)
-layer_manipulator.add_layer(dense_layer, 3, 0)
+layer_manipulator.add_layer(layers.GRULayer(units=5), 3, 0)
 layer_manipulator.forward_layer(3, 0)
-layer_manipulator.add_layer(layers.DenseLayer(units=3), 4, 0)
+layer_manipulator.add_layer(layers.FlattenLayer(), 4, 0)
+layer_manipulator.forward_layer(4, 0)
+layer_manipulator.add_layer(layers.DenseLayer(units=3), 5, 0)
 
 
 model_compiler = ModelCompiler()
@@ -90,7 +92,7 @@ new_model = model.ModelWrapper(dataprocessing_engine, hyperparameter_manager, la
 
 compile_job = job_manager.queue_compile_job(new_model, model_compiler)
 
-time.sleep(3)
+time.sleep(5)
 
 model = compile_job.return_value()
 
