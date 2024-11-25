@@ -3,6 +3,10 @@ from rq import Queue
 from rq.worker import Worker, WorkerStatus
 from rq.command import send_shutdown_command, send_kill_horse_command
 from rq.serializers import DefaultSerializer
+
+from routes.helpers.compiler import ModelCompiler
+from routes.helpers.model import ModelWrapper
+
 import time
 
 """
@@ -54,7 +58,7 @@ class JobManager:
         self.inference_queue = Queue('inference', connection=self.redis_connection)
         self.data_queue = Queue('data', connection=self.redis_connection)
 
-    def queue_compile_job(self, model_wrapper, compiler):
+    def queue_compile_job(self, model_wrapper: ModelWrapper, compiler: ModelCompiler):
         job = self.compile_queue.enqueue(compiler.compile_model, model_wrapper)
 
         return job
