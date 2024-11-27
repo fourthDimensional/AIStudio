@@ -92,9 +92,30 @@ class DenseLayer(LayerSkeleton):
         self.layer_name = 'dense'
 
         self.hyperparameters['units'] = kwargs['units']
+        self.hyperparameters['activation'] = kwargs.get('activation', 'relu')
+        self.hyperparameters['use_bias'] = kwargs.get('use_bias', True)
+        self.hyperparameters['kernel_initializer'] = kwargs.get('kernel_initializer', 'glorot_uniform')
+        self.hyperparameters['bias_initializer'] = kwargs.get('bias_initializer', 'zeros')
+        self.hyperparameters['kernel_regularizer'] = kwargs.get('kernel_regularizer', None)
+        self.hyperparameters['bias_regularizer'] = kwargs.get('bias_regularizer', None)
+        self.hyperparameters['activity_regularizer'] = kwargs.get('activity_regularizer', None)
+        self.hyperparameters['kernel_constraint'] = kwargs.get('kernel_constraint', None)
+        self.hyperparameters['bias_constraint'] = kwargs.get('bias_constraint', None)
+        self.hyperparameters['lora_rank'] = kwargs.get('lora_rank', None)
 
     def instance_layer(self, previous_layer):
-        layer = keras.layers.Dense(units=self.hyperparameters['units'])
+        layer = keras.layers.Dense(
+            units=self.hyperparameters['units'],
+            activation=self.hyperparameters['activation'],
+            use_bias=self.hyperparameters['use_bias'],
+            kernel_initializer=self.hyperparameters['kernel_initializer'],
+            bias_initializer=self.hyperparameters['bias_initializer'],
+            kernel_regularizer=self.hyperparameters['kernel_regularizer'],
+            bias_regularizer=self.hyperparameters['bias_regularizer'],
+            activity_regularizer=self.hyperparameters['activity_regularizer'],
+            kernel_constraint=self.hyperparameters['kernel_constraint'],
+            bias_constraint=self.hyperparameters['bias_constraint'],
+        )
         return layer(previous_layer)
 
     def get_default_hyperparameters(self):

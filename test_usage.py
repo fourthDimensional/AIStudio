@@ -36,7 +36,7 @@ REDIS_WORKER_CONNECTION_INFO = {
 
 # jobs.kill_all_workers(Redis(**REDIS_CONNECTION_INFO))
 
-job_manager = jobs.JobManager(Redis(**REDIS_WORKER_CONNECTION_INFO))
+job_manager = jobs.JobManager(REDIS_WORKER_CONNECTION_INFO)
 
 dataset_storage = StorageInterface(RedisFileStorage(Redis(**REDIS_CONNECTION_INFO)))
 
@@ -52,7 +52,6 @@ print(os.environ.get('KERAS_BACKEND'))
 dataframe = pd.read_csv('static/datasets/rainfall_amount_regression.csv')
 
 layer_manipulator = model.LayerManipulator()
-hyperparameter_manager = model.HyperparameterManager()
 dataprocessing_engine = model.DataProcessingEngine()
 
 dataprocessing_engine.add_modification(data_proc.DateFeatureExtraction('date'))
@@ -82,13 +81,16 @@ layer_manipulator.add_layer(layers.GRULayer(units=5), 3, 0)
 layer_manipulator.forward_layer(3, 0)
 layer_manipulator.add_layer(layers.FlattenLayer(), 4, 0)
 layer_manipulator.forward_layer(4, 0)
-layer_manipulator.add_layer(layers.DenseLayer(units=3), 5, 0)
+layer_manipulator.add_layer(layers.DenseLayer(units=3),5, 0)
+
+
+print(layer_manipulator.get_layer_hyperparameters(5, 0))
 
 
 model_compiler = ModelCompiler()
 config_packager = jobs.JobConfigPackager()
 
-new_model = model.ModelWrapper(dataprocessing_engine, hyperparameter_manager, layer_manipulator)
+new_model = model.ModelWrapper(dataprocessing_engine, layer_manipulator)
 
 compile_job = job_manager.queue_compile_job(new_model, model_compiler)
 

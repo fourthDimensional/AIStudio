@@ -13,6 +13,8 @@ Future Plans:
 import keras
 from routes.helpers.submodules.layers_registry import InputLayer
 from routes.helpers.submodules.layers_registry import UniversalSplitLayer
+from redis import Redis
+from routes.helpers.model import ModelWrapper
 
 
 class ModelCompiler:
@@ -24,7 +26,12 @@ class ModelCompiler:
         self.current_x = 0
         self.current_y = 0
 
-    def compile_model(self, model_wrapper):
+    def compile_model(self, model_wrapper, redis_connection: dict):
+        redis = Redis(**redis_connection)
+
+        if redis.exists(f"compiled_model:{model_wrapper.uuid}"):
+            return ModelWrapper.deserialize(self.redis_connection.JSON().get(f"compiled_model:{model_wrapper.uuid}"))
+
         layers = model_wrapper.layer_manipulator.get_layers()
 
         self.input_storage = {'input': [], 0: {0: []}}
@@ -32,7 +39,7 @@ class ModelCompiler:
         self.current_y = 0
 
         input_layer = None
-        previous_layer = 2
+        previous_layer = 2 # don't change this, it breaks it.
 
         for slice in layers:
             input_layer, previous_layer = self._process_slice(layers[slice], input_layer, previous_layer)
@@ -40,6 +47,9 @@ class ModelCompiler:
             self.current_y = 0
 
         keras.Model(inputs=input_layer, outputs=previous_layer).summary()
+
+        redis.json().set(f"compiled_model:{model_wrapper.uuid}", '$', model_wrapper.serialize())
+        redis.expire(f"compiled_model:{model_wrapper.uuid}", 3600) # 1 hour
 
         return keras.Model(inputs=input_layer, outputs=previous_layer)
 
@@ -113,8 +123,3 @@ class ModelCompiler:
             subsplit_dimensions.append(subsplit[0])
 
         return subsplit_dimensions
-
-
-# class TensorflowModelCompiler(ModelCompiler):
-#     """Takes in a model wrapper object and compiles it into a tensorflow model object."""
-#     pass

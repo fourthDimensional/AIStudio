@@ -11,6 +11,10 @@ from sklearn.model_selection import train_test_split
 from routes.helpers.submodules import data_proc, layers, utils
 import logging
 import re
+import jsonpickle
+import json
+
+from routes.helpers.submodules.utils import generate_uuid
 
 logger = logging.getLogger(__name__)
 
@@ -58,33 +62,41 @@ class ModelWrapper:
         layer_manipulator (LayerManipulator): Keeps track of the current layer structure.
     """
 
-    def __init__(self, data_processing_engine, hyperparameter_manager, layer_manipulator):
+    def __init__(self, data_processing_engine, layer_manipulator):
         """
         Initializes the ModelWrapper with the given components.
 
         Args:
             data_processing_engine (DataProcessingEngine): The data processing engine.
-            hyperparameter_manager (HyperparameterManager): The hyperparameter manager.
             layer_manipulator (LayerManipulator): The layer manipulator.
         """
         self.data_processing_engine = data_processing_engine
-        self.hyperparameter_manager = hyperparameter_manager
         self.layer_manipulator = layer_manipulator
+
+        # generate a unique identifier for the model
+        self.uuid = generate_uuid()
 
     def serialize(self):
         """
-        Serializes the model wrapper for storage or transmission.
-        """
-        pass
+        Serializes the model wrapper.
 
-    def deserialize(self, data):
+        Returns:
+            str: The serialized model wrapper.
         """
-        Deserializes the model wrapper from stored data.
+        return json.loads(jsonpickle.encode(self))
+
+    @classmethod
+    def deserialize(cls, data):
+        """
+        Deserializes the model wrapper.
 
         Args:
-            data (dict): The data to deserialize from.
+            data (str): The serialized model wrapper.
+
+        Returns:
+            ModelWrapper: The deserialized model wrapper.
         """
-        pass
+        return jsonpickle.decode(json.dumps(data))
 
 class DataProcessingEngine:
     """
@@ -212,57 +224,6 @@ class DataProcessingEngine:
         )
         return fields_train, fields_test, labels_train, labels_test
 
-class HyperparameterManager:
-    """
-    Manages hyperparameters for layers, data modifications, and optimization algorithms.
-
-    Attributes:
-        hyperparameters (dict): A dictionary of hyperparameters.
-    """
-
-    def __init__(self):
-        """
-        Initializes the HyperparameterManager with an empty dictionary of hyperparameters.
-        """
-        self.hyperparameters = {}
-
-    def set_hyperparameter(self, name, value):
-        """
-        Sets a hyperparameter.
-
-        Args:
-            name (str): The name of the hyperparameter.
-            value: The value of the hyperparameter.
-        """
-        pass
-
-    def get_hyperparameter(self, name):
-        """
-        Gets the value of a hyperparameter.
-
-        Args:
-            name (str): The name of the hyperparameter.
-
-        Returns:
-            The value of the hyperparameter.
-        """
-        pass
-
-    def list_hyperparameters(self):
-        """
-        Lists all hyperparameters.
-
-        Returns:
-            dict: A dictionary of all hyperparameters.
-        """
-        pass
-
-    def clear_hyperparameters(self):
-        """
-        Clears all hyperparameters.
-        """
-        pass
-
 
 class LayerManipulator:
     """
@@ -346,6 +307,65 @@ class LayerManipulator:
         """
         if x_position in self.layers and y_position in self.layers[x_position]:
             self.layers[x_position][y_position]['outputs'].append([0, x_position + 1, 0])
+
+    def get_layer_hyperparameters(self, x_position, y_position):
+        """
+        Gets the hyperparameters of a layer at the specified position.
+
+        Args:
+            x_position (int): The x-coordinate of the layer.
+            y_position (int): The y-coordinate of the layer.
+
+        Returns:
+            dict: The hyperparameters of the layer.
+        """
+        if x_position in self.layers and y_position in self.layers[x_position]:
+            return self.layers[x_position][y_position]['layer'].get_hyperparameters()
+        return None
+
+    def set_layer_hyperparameter(self, x_position, y_position, hyperparameter, value):
+        """
+        Sets a hyperparameter of a layer at the specified position.
+
+        Args:
+            x_position (int): The x-coordinate of the layer.
+            y_position (int): The y-coordinate of the layer.
+            hyperparameter (str): The hyperparameter to set.
+            value: The value to set the hyperparameter to.
+        """
+        if x_position in self.layers and y_position in self.layers[x_position]:
+            self.layers[x_position][y_position]['layer'].hyperparameters[hyperparameter] = value
+
+    def get_layer_hyperparameter(self, x_position, y_position, hyperparameter):
+        """
+        Gets a specific hyperparameter of a layer at the specified position.
+
+        Args:
+            x_position (int): The x-coordinate of the layer.
+            y_position (int): The y-coordinate of the layer.
+            hyperparameter (str): The hyperparameter to get.
+
+        Returns:
+            The value of the hyperparameter.
+        """
+        if x_position in self.layers and y_position in self.layers[x_position]:
+            return self.layers[x_position][y_position]['layer'].hyperparameters.get(hyperparameter)
+        return None
+
+    def get_layer_hyperparameter_ranges(self, x_position, y_position):
+        """
+        Gets the ranges of acceptable values for hyperparameters of a layer at the specified position.
+
+        Args:
+            x_position (int): The x-coordinate of the layer.
+            y_position (int): The y-coordinate of the layer.
+
+        Returns:
+            dict: The ranges of acceptable values for the hyperparameters of the layer.
+        """
+        if x_position in self.layers and y_position in self.layers[x_position]:
+            return self.layers[x_position][y_position]['layer'].get_hyperparameter_ranges()
+        return None
 
 
 class Model:

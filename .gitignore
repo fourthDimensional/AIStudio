@@ -16,3 +16,15 @@ REDIS_DATA
 
 static/datasets/
 truckconfig.json
+
+.idea/
+
+static/datasets/
+
+.ideavimrc
+
+REDIS_DATA/appendonlydir/
+
+REDIS_DATA/
+
+app.log

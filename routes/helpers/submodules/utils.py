@@ -10,6 +10,7 @@ import json
 import pandas as pd
 
 from pathlib import Path
+import uuid as uid
 
 MAX_NETWORKS_PER_PERSON = 30
 MODEL_PATH = '$'
@@ -41,6 +42,26 @@ Reasonable test coverage, but more will be needed once the deprecated code is re
 Future Plans:
 - Organize into different files
 """
+
+
+def generate_uuid():
+    """
+    Generate a UUID using the Python UUID library.
+
+    :return: A UUID.
+    """
+    uuid = str(uid.uuid4())
+    attempts = 0
+    while redis_client.exists(f'uuid:{uuid}'):
+        if attempts > 5:
+            raise Exception('UUID generation failed')
+
+        uuid = str(uid.uuid4())
+
+    redis_client.set(f'uuid:{uuid}', 1)
+
+    return uuid
+
 
 def check_naming_convention(string):
     """
