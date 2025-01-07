@@ -10,3 +10,4 @@ matplotlib~=3.9.2
 scikit-learn~=1.5.2
 pydot~=3.0.2
 graphviz~=0.20.3
+ydata_profiling~=4.12.1

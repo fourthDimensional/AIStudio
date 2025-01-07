@@ -1,7 +1,7 @@
 from flask import Blueprint, current_app, request, send_file
 from routes.helpers.submodules.auth import require_api_key
 from routes.helpers.compiler import ModelCompiler
-from routes.helpers.training import TrainingConfigPackager
+from routes.helpers.jobs import TrainingConfigPackager
 from routes.helpers.project import Project
 from routes.helpers.submodules.sanitation import sanitize_input
 

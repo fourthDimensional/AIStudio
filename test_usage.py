@@ -92,15 +92,17 @@ config_packager = jobs.JobConfigPackager()
 
 new_model = model.ModelWrapper(dataprocessing_engine, layer_manipulator)
 
-compile_job = job_manager.queue_compile_job(new_model, model_compiler)
+job = job_manager.queue_train_job(new_model, model_compiler, config_packager)
 
-time.sleep(5)
+# _, compile_job = job_manager.queue_compile_job(new_model, model_compiler)
+#
+# time.sleep(5)
+#
+# model = compile_job.return_value()
 
-model = compile_job.return_value()
+# model.compile(optimizer=Adam(), loss=MeanSquaredError(), metrics=[BinaryAccuracy()])
+# model.fit(x, y, epochs=100, batch_size=11)
+#
+# model.summary()
 
-model.compile(optimizer=Adam(), loss=MeanSquaredError(), metrics=[BinaryAccuracy()])
-model.fit(x, y, epochs=100, batch_size=11)
-
-model.summary()
-
-keras.utils.plot_model(model, "test.png", rankdir='LR', show_shapes=True)
+# keras.utils.plot_model(model, "test.png", rankdir='LR', show_shapes=True)
