@@ -1,4 +1,4 @@
-name: Build
+name: Code Quality
 on:
   push:
     branches:
@@ -19,8 +19,6 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install tox and any other packages
         run: pip install tox
-      - name: Install dependencies
-        run: pip install -r requirements.txt
       - name: Run tox
         run: tox -e py
       - uses: SonarSource/sonarqube-scan-action@v4
