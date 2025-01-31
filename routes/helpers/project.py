@@ -1,7 +1,7 @@
 import secrets
 import os
 from routes.helpers.compiler import ModelCompiler
-from routes.helpers.training import TrainingConfigPackager
+from routes.helpers.jobs import JobConfigPackager
 
 from redis import Redis
 
@@ -28,7 +28,7 @@ Will be used to store and manage projects and their associated models and featur
 """
 
 class Project:
-    def __init__(self, dataset_key: str, model_compiler: ModelCompiler, training_config_packager: TrainingConfigPackager,
+    def __init__(self, dataset_key: str, model_compiler: ModelCompiler, training_config_packager: JobConfigPackager,
                  title: str = None, description: str = None, project_key: str = str(secrets.token_hex(nbytes=4)),
                 training_history_key: str = str(secrets.token_hex(nbytes=4))):
         self.model_registry: dict = {}
