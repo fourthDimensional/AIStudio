@@ -7,7 +7,7 @@ on:
     types: [opened, synchronize, reopened]
 jobs:
   sonarqube:
-    name: SonarQube Cloud
+    name: SonarQube
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -21,7 +21,11 @@ jobs:
         run: pip install tox
       - name: Run tox
         run: tox -e py
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v4
+      - uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      - uses: SonarSource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
