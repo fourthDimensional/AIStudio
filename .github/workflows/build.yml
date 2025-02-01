@@ -15,10 +15,6 @@ jobs:
   sonarqube:
     name: SonarQube
     runs-on: ubuntu-latest
-    strategy:
-      # You can add a matrix here if you want to test multiple Python versions.
-      matrix:
-        python: [3.10]  # Adjust the versions as needed.
     steps:
       # 1. Check out the repository
       - name: Checkout repository
