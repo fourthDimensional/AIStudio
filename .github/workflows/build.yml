@@ -13,7 +13,7 @@ on:
 
 jobs:
   sonarqube:
-    name: SonarQube
+    name: Analysis and Tests
     runs-on: ubuntu-latest
     steps:
       # 1. Check out the repository
