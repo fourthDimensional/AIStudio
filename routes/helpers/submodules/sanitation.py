@@ -8,5 +8,5 @@ def sanitize_input(input_str):
 
     :return: The sanitized string.
     """
-    sanitized_str = html.escape(input_str)
-    return sanitized_str
+    # sanitized_str = html.escape(input_str)
+    return input_str
