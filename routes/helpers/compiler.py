@@ -30,7 +30,7 @@ class ModelCompiler:
         redis = Redis(**redis_connection)
 
         if redis.exists(f"compiled_model:{model_wrapper.uuid}"):
-            return ModelWrapper.deserialize(self.redis_connection.JSON().get(f"compiled_model:{model_wrapper.uuid}"))
+            return ModelWrapper.deserialize(redis.JSON().get(f"compiled_model:{model_wrapper.uuid}"))
 
         layers = model_wrapper.layer_manipulator.get_layers()
 
