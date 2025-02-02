@@ -52,6 +52,7 @@ jobs:
       - name: Run tox
         uses: lsst-sqre/run-tox@v1
         with:
+          tox-envs: "py"
           python-version: 3.10.16
           use-cache: true
 
