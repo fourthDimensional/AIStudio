@@ -50,7 +50,10 @@ jobs:
 
       # 5. Run tox to execute tests in the configured environment.
       - name: Run tox
-        run: tox -e py
+        uses: lsst-sqre/run-tox@v1
+        with:
+          python-version: 3.10.16
+          use-cache: true
 
       - name: Surface failing tests
         if: always()
