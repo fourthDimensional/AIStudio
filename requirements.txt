@@ -12,6 +12,5 @@ pydot~=3.0.2
 graphviz~=0.20.3
 fakeredis[json]~=2.26.2
 redis~=5.2.1
-numpy~=2.2.1
 ydata-profiling~=4.12.1
 requests~=2.32.3
