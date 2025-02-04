@@ -107,26 +107,29 @@ class JobManager:
 
 
 def train_model(training_config: TrainingConfig):
-    callbacks = []
+    # callbacks = []
+    #
+    # if hasattr(training_config, 'early_stopping'):
+    #     early_stopping = EarlyStopping(
+    #         monitor=training_config.early_stopping['monitor'],
+    #         min_delta=training_config.early_stopping['min_delta'],
+    #         patience=training_config.early_stopping['patience'],
+    #         mode=training_config.early_stopping['mode']
+    #     )
+    #     callbacks.append(early_stopping)
+    #
+    # if hasattr(training_config, 'checkpointing'):
+    #     checkpointing = ModelCheckpoint(
+    #         monitor=training_config.checkpointing['monitor'],
+    #         mode=training_config.checkpointing['mode'],
+    #         save_best_only=training_config.checkpointing['save_best_only']
+    #     )
+    #     callbacks.append(checkpointing)
 
-    if hasattr(training_config, 'early_stopping'):
-        early_stopping = EarlyStopping(
-            monitor=training_config.early_stopping['monitor'],
-            min_delta=training_config.early_stopping['min_delta'],
-            patience=training_config.early_stopping['patience'],
-            mode=training_config.early_stopping['mode']
-        )
-        callbacks.append(early_stopping)
+    # TODO future notes on 2/4. I've remembered that I want to make the actual .compile process part of my model compilation process/class. The training job should only be actually training.
+    # TODO This is because the train model process will be repeatedly called during hyperparameter training
 
-    if hasattr(training_config, 'checkpointing'):
-        checkpointing = ModelCheckpoint(
-            monitor=training_config.checkpointing['monitor'],
-            mode=training_config.checkpointing['mode'],
-            save_best_only=training_config.checkpointing['save_best_only']
-        )
-        callbacks.append(checkpointing)
-
-    keras_model.compile(optimizer=training_config.optimizer, loss=training_config.loss, metrics=training_config.metrics)
+    # keras_model.compile(optimizer=training_config.optimizer, loss=training_config.loss, metrics=training_config.metrics)
     keras_model.fit(x, y, epochs=training_config.epochs, batch_size=training_config.batch_size, callbacks=callbacks)
 
     return keras_model
