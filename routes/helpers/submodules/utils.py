@@ -189,7 +189,7 @@ def convert_to_dataframe(dataset_path):
     for encoding in encodings:
         with open(dataset_path, 'r', encoding=encoding, errors='replace') as f:
             dataframe_csv = pd.read_csv(f)
-            dataframe_csv.dropna(axis=0, inplace=True)
+            dataframe_csv = dataframe_csv.dropna(axis=0)
         break
     return dataframe_csv
 
