@@ -153,40 +153,6 @@ def test_delete_model_not_exist(redis_setup):
     assert utils.delete_model(VALID_API_KEY, non_existing_model_id, redis_setup) == 0
 
 
-def test_find_index_of_specific_class_found():
-    """
-    Test the utility function for finding the index of a specific class instance in a list.
-
-    This test verifies that when the specified class instance is present in the list, its index is correctly returned.
-    """
-    class TestClass:
-        pass
-
-    class OtherClass:
-        pass
-
-    given_list = [OtherClass(), TestClass(), OtherClass()]
-    index = utils.find_index_of_specific_class(given_list, TestClass)
-    assert index == 1
-
-
-def test_find_index_of_specific_class_not_found():
-    """
-    Test the utility function for finding the index of a specific class instance in a list when it is not present.
-
-    Verifies that the function returns None when the specified class instance is not in the list.
-    """
-    class TestClass:
-        pass
-
-    class OtherClass:
-        pass
-
-    given_list = [OtherClass(), OtherClass()]
-    index = utils.find_index_of_specific_class(given_list, TestClass)
-    assert index is None
-
-
 @pytest.mark.parametrize("given_id,expected", [
     ("10", True),
     ("31", False),  # Assuming MAX_NETWORKS_PER_PERSON is 30

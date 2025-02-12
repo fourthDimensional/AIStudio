@@ -214,25 +214,6 @@ def check_id(given_id):
 
     return True
 
-
-# TODO Remove usages of this and delete
-def find_index_of_specific_class(given_list, specific_class):
-    """
-    Find the index of the first occurrence of a specific class type in a given list.
-
-    :param given_list: The list to search through.
-    :param specific_class: The class type to search for.
-    :return: The index of the first occurrence of the specified class in the list, or None if not found.
-    """
-    logging.warning('DEPRECATED - find_index_of_specific_class()')
-
-    try:
-        index = next(i for i, obj in enumerate(given_list) if isinstance(obj, specific_class))
-        return index
-    except StopIteration:
-        return None
-
-
 def merge_lists(a, b):
     """
     Merge two lists or append an item to a list.
