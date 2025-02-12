@@ -12,6 +12,8 @@ import pandas as pd
 from pathlib import Path
 import uuid as uid
 
+MODEL_KEY_FORMAT = "model:{}:{}:data"
+
 MAX_NETWORKS_PER_PERSON = 30
 MODEL_PATH = '$'
 MAX_LOGS = 15
@@ -130,7 +132,7 @@ def fetch_model(api_key, model_id, redis_server=redis_client, secret=SECRET_KEY)
 
     uuid = get_uuid(api_key, redis_server)
 
-    model_key = "model:{}:{}:data".format(uuid, model_id)
+    model_key = MODEL_KEY_FORMAT.format(uuid, model_id)
     signature_key = "model:{}:{}:signature".format(uuid, model_id)
 
     if not redis_server.exists(model_key):
@@ -163,7 +165,7 @@ def store_model(api_key, model_id, model, redis_server=redis_client, secret=SECR
 
     uuid = get_uuid(api_key, redis_server)
 
-    model_key = "model:{}:{}:data".format(uuid, model_id)
+    model_key = MODEL_KEY_FORMAT.format(uuid, model_id)
     signature_key = "model:{}:{}:signature".format(uuid, model_id)
     serialized_model = jsonpickle.encode(model, keys=True)
 
@@ -281,7 +283,7 @@ def delete_model(api_key, model_id, redis_server=redis_client):
 
     uuid = get_uuid(api_key, redis_server)
 
-    model_key = "model:{}:{}:data".format(uuid, model_id)
+    model_key = MODEL_KEY_FORMAT.format(uuid, model_id)
 
     if not redis_server.exists(model_key):
         return 0

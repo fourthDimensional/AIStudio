@@ -5,7 +5,7 @@
 # https://docs.docker.com/engine/reference/builder/
 
 ARG PYTHON_VERSION=3.10.12
-FROM python:${PYTHON_VERSION}-slim as base
+FROM python:${PYTHON_VERSION}-slim AS base
 
 # Prevents Python from writing pyc files.
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -46,4 +46,4 @@ COPY . .
 EXPOSE 5000
 
 # Run the application.
-CMD flask run --port=5000 --host=0.0.0.0
+CMD ["flask", "run", "--port=5000", "--host=0.0.0.0"]

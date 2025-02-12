@@ -11,5 +11,6 @@ scikit-learn~=1.6.0
 pydot~=3.0.2
 graphviz~=0.20.3
 fakeredis[json]~=2.26.2
+flask_talisman
 redis~=5.2.1
 requests~=2.32.3

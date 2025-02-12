@@ -27,6 +27,9 @@ AUTHKEY_HEADER = 'authkey'
 logger = logging.getLogger(__name__)
 
 
+CORRUPTED_ERROR = {'error': 'Specified model is corrupted and cannot be deleted'}
+
+
 @model_basic.route('/model/create', methods=['POST'])
 @require_api_key
 def create_model():
@@ -66,7 +69,7 @@ def get_model_name():
 
     match error:
         case -1, -2:
-            return {'error': 'Specified model is corrupted and cannot be deleted'}
+            return CORRUPTED_ERROR
         case 0:
             return {'error': 'Specified model id does not exist'}
 
@@ -83,7 +86,7 @@ def specify_model_features():
 
     match error:
         case -1, -2:
-            return {'error': 'Specified model is corrupted and cannot be deleted'}
+            return CORRUPTED_ERROR
         case 0:
             return {'error': 'Specified model id does not exist'}
 
@@ -112,7 +115,7 @@ def generate_model_image():
 
     match error:
         case -1, -2:
-            return {'error': 'Specified model is corrupted and cannot be deleted'}
+            return CORRUPTED_ERROR
         case 0:
             return {'error': 'Specified model id does not exist'}
 

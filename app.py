@@ -15,11 +15,14 @@ from pathlib import Path
 from logging.handlers import RotatingFileHandler
 
 from flask_talisman import Talisman
+from flask_wtf.csrf import CSRFProtect
 
 from routes.helpers.submodules.auth import generate_api_key, save_api_key, require_api_key, register_session_token, is_valid_api_key, deregister_session_token
 
 # instantiate the app
 app = Flask(__name__)
+csrf = CSRFProtect()
+csrf.init_app(app)
 
 # Talisman(app)
 
@@ -122,8 +125,11 @@ def logout():
     if not is_valid_session_token(session_token):
         return jsonify({'error': 'Invalid session token'}), 401
 
-    # TODO add error handling here
-    deregister_session_token(session_token)
+    try:
+        deregister_session_token(session_token)
+    except Exception as e:
+        logging.error(f"Error deregistering session token: {e}")
+        return jsonify({'error': 'Failed to deregister session token, please report this to the website owner'}), 500
 
     response = make_response()
     response.set_cookie('session', value='', secure=True, httponly=True, samesite='Strict')
