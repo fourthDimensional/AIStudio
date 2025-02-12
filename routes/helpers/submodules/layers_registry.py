@@ -2,6 +2,7 @@ import os
 
 import keras
 from class_registry import ClassRegistry
+import tensorflow as tf
 
 """
 Up-to-date Layer Registry and Class Definition Code

@@ -239,6 +239,9 @@ class LayerManipulator:
         """
         self.layers = {}
 
+        self.current_x_position = 0
+        self.current_y_position = 0
+
     def add_layer(self, layer, x_position, y_position):
         """
         Adds a layer to the model at the specified position.
@@ -366,6 +369,21 @@ class LayerManipulator:
         if x_position in self.layers and y_position in self.layers[x_position]:
             return self.layers[x_position][y_position]['layer'].get_hyperparameter_ranges()
         return None
+
+    def layer(self, layer):
+        """
+        Adds a layer to the model at the current position and forwards it.
+
+        Args:
+            layer: The layer to add.
+
+        Returns:
+            self: The LayerManipulator instance to allow chaining.
+        """
+        self.add_layer(layer, self.current_x_position, self.current_y_position)
+        self.forward_layer(self.current_x_position, self.current_y_position)
+        self.current_x_position += 1
+        return self
 
 
 class Model:

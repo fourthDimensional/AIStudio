@@ -76,17 +76,40 @@ def test_compile_model_with_complex_layers(mock_redis, model_wrapper):
     gru_layer = GRULayer(units=5)
     flatten_layer = FlattenLayer()
 
+    (layer_manipulator
+     .layer(input_layer)
+     .layer(batch_norm_layer)
+     .layer(reshape_layer)
+     .layer(gru_layer)
+     .layer(flatten_layer)
+     .layer(dense_layer))
+
+    compiler = ModelCompiler()
+    redis_connection = {'host': 'localhost', 'port': 6379, 'db': 0}
+
+    compiled_model = compiler.compile_model(model_wrapper, redis_connection)
+
+    assert compiled_model is not None
+    mock_redis.json.return_value.set.assert_called_once()
+    mock_redis.expire.assert_called_once()
+
+def test_compile_model_with_subsplit_layers(mock_redis, model_wrapper):
+    layer_manipulator = model_wrapper.layer_manipulator
+
+    # Add layers to the model
+    input_layer = InputLayer(input_size=5)
+    dense_layer = DenseLayer(units=10)
+
     layer_manipulator.add_layer(input_layer, 0, 0)
     layer_manipulator.forward_layer(0, 0)
-    layer_manipulator.add_layer(batch_norm_layer, 1, 0)
-    layer_manipulator.forward_layer(1, 0)
-    layer_manipulator.add_layer(reshape_layer, 2, 0)
+    layer_manipulator.add_layer(dense_layer, 1, 0)
+    layer_manipulator.point_layer(1, 0, 2, 0, 5)
+    layer_manipulator.point_layer(1, 0, 2, 1, 5)
+    layer_manipulator.add_layer(dense_layer, 2, 0)
     layer_manipulator.forward_layer(2, 0)
-    layer_manipulator.add_layer(gru_layer, 3, 0)
-    layer_manipulator.forward_layer(3, 0)
-    layer_manipulator.add_layer(flatten_layer, 4, 0)
-    layer_manipulator.forward_layer(4, 0)
-    layer_manipulator.add_layer(dense_layer, 5, 0)
+    layer_manipulator.add_layer(dense_layer, 2, 1)
+    layer_manipulator.forward_layer(2, 1)
+    layer_manipulator.add_layer(dense_layer, 3, 0)
 
     compiler = ModelCompiler()
     redis_connection = {'host': 'localhost', 'port': 6379, 'db': 0}
