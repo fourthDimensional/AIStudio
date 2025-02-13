@@ -87,22 +87,19 @@ layer_manipulator.add_layer(layers.DenseLayer(units=3),5, 0)
 print(layer_manipulator.get_layer_hyperparameters(5, 0))
 
 
-model_compiler = ModelCompiler()
-config_packager = jobs.JobConfigPackager()
+model_compiler = ModelCompiler(optimizer=Adam(), loss=MeanSquaredError(), metrics=[BinaryAccuracy()])
+# config_packager = jobs.TrainingConfigPackager()
 
-new_model = model.ModelWrapper(dataprocessing_engine, layer_manipulator)
+new_model = model.ModelWrapper(dataprocessing_engine, layer_manipulator, model_compiler)
 
-job = job_manager.queue_train_job(new_model, model_compiler, config_packager)
+job = job_manager.queue_train_job(new_model, None)
 
-# _, compile_job = job_manager.queue_compile_job(new_model, model_compiler)
-#
-# time.sleep(5)
-#
-# model = compile_job.return_value()
+while not job.is_finished:
+    print("Job is not finished")
+    time.sleep(1)
 
-# model.compile(optimizer=Adam(), loss=MeanSquaredError(), metrics=[BinaryAccuracy()])
-# model.fit(x, y, epochs=100, batch_size=11)
-#
-# model.summary()
+model = job.return_value()
 
-# keras.utils.plot_model(model, "test.png", rankdir='LR', show_shapes=True)
+model.summary()
+
+keras.utils.plot_model(model, "test.png", rankdir='LR', show_shapes=True)

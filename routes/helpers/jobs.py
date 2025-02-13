@@ -11,6 +11,10 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 import time
 
+
+# TEMp
+import pandas as pd
+
 """
 WIP Up-to-date Training Class Code
 
@@ -27,36 +31,13 @@ def kill_all_workers(redis_connection: Redis):
     for worker in workers:
         send_shutdown_command(redis_connection, worker.name)
 
-class JobConfigPackager:
+class TrainingConfigPackager:
     pass
 
 class TrainingConfig:
-    def __init__(self, optimizer, loss, metrics, epochs, batch_size):
-        self.optimizer = optimizer
-        self.loss = loss
-        self.metrics = metrics
+    def __init__(self, epochs, batch_size):
         self.epochs = epochs
         self.batch_size = batch_size
-
-        self.compiled_model_uuid = None
-
-    def set_compiled_model_uuid(self, compiled_model_uuid):
-        self.compiled_model_uuid = compiled_model_uuid
-
-    def define_early_stopping(self, monitor, min_delta, patience, mode):
-        self.early_stopping = {
-            'monitor': monitor,
-            'min_delta': min_delta,
-            'patience': patience,
-            'mode': mode
-        }
-
-    def define_checkpointing(self, monitor, mode, save_best_only):
-        self.checkpointing = {
-            'monitor': monitor,
-            'mode': mode,
-            'save_best_only': save_best_only
-        }
 
 
 # class WorkerAgent:
@@ -88,27 +69,18 @@ class JobManager:
         self.inference_queue = Queue('inference', connection=connection)
         self.data_queue = Queue('data', connection=connection)
 
-    def queue_compile_job(self, model_wrapper: ModelWrapper, compiler: ModelCompiler):
-        job = self.compile_queue.enqueue(compiler.compile_model, model_wrapper, self.redis_connection)
-
-        return model_wrapper.uuid, job
-
-    def queue_train_job(self, model: ModelWrapper, compiler: ModelCompiler, training_config: TrainingConfig):
-        training_config = TrainingConfig(optimizer='adam', loss='mean_squared_error', metrics=['binary_accuracy'], epochs=100, batch_size=11)
+    def queue_train_job(self, model: ModelWrapper, training_config: TrainingConfig):
+        training_config = TrainingConfig(epochs=100, batch_size=11)
         # above is a placeholder for now
 
-        uuid, _ = self.queue_compile_job(model, ModelCompiler())
-
-        training_config.set_compiled_model_uuid(uuid)
-
-        job = self.train_queue.enqueue(train_model, model, training_config)
+        job = self.train_queue.enqueue(train_model, training_config, model)
 
         return job
 
 
-def train_model(training_config: TrainingConfig):
-    # callbacks = []
-    #
+def train_model(training_config: TrainingConfig, model: ModelWrapper):
+    callbacks = []
+
     # if hasattr(training_config, 'early_stopping'):
     #     early_stopping = EarlyStopping(
     #         monitor=training_config.early_stopping['monitor'],
@@ -126,10 +98,14 @@ def train_model(training_config: TrainingConfig):
     #     )
     #     callbacks.append(checkpointing)
 
-    # TODO future notes on 2/4. I've remembered that I want to make the actual .compile process part of my model compilation process/class. The training job should only be actually training.
-    # TODO This is because the train model process will be repeatedly called during hyperparameter training
+    dataframe = pd.read_csv('static/datasets/rainfall_amount_regression.csv')
 
-    # keras_model.compile(optimizer=training_config.optimizer, loss=training_config.loss, metrics=training_config.metrics)
-    keras_model.fit(x, y, epochs=training_config.epochs, batch_size=training_config.batch_size, callbacks=callbacks)
+    x, y = model.data_processing_engine.separate_labels(dataframe)
 
-    return keras_model
+    compiled_model = model.compiler.compile_model(model)
+
+    print("Compiled model", compiled_model)
+
+    compiled_model.fit(x, y, epochs=training_config.epochs, batch_size=training_config.batch_size, callbacks=callbacks)
+
+    return compiled_model

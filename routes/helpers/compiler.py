@@ -19,18 +19,39 @@ from routes.helpers.model import ModelWrapper
 
 class ModelCompiler:
     """Base class for taking in a model wrapper object and compiling it into a model object."""
-    def __init__(self, backend='tensorflow'):
+    def __init__(self, metrics=None, optimizer="Adam", loss="MeanSquaredError", backend='tensorflow'):
         self.backend = backend
+
+        self.optimizer = optimizer
+        self.loss = loss
+        if metrics is None:
+            self.metrics = ['accuracy']
+        else:
+            self.metrics = metrics
 
         self.input_storage = {'input': []}
         self.current_x = 0
         self.current_y = 0
 
-    def compile_model(self, model_wrapper, redis_connection: dict):
-        redis = Redis(**redis_connection)
+    def define_early_stopping(self, monitor, min_delta, patience, mode):
+        self.early_stopping = {
+            'monitor': monitor,
+            'min_delta': min_delta,
+            'patience': patience,
+            'mode': mode
+        }
 
-        if redis.exists(f"compiled_model:{model_wrapper.uuid}"):
-            return ModelWrapper.deserialize(redis.JSON().get(f"compiled_model:{model_wrapper.uuid}"))
+    def compile_model(self, model_wrapper):
+        model = self.build_model(model_wrapper)
+        model.compile(optimizer=self.optimizer, loss=self.loss, metrics=self.metrics)
+
+        return model
+
+    def build_model(self, model_wrapper):
+        # redis = Redis(**redis_connection)
+        #
+        # if redis.exists(f"compiled_model:{model_wrapper.uuid}"):
+        #     return ModelWrapper.deserialize(redis.JSON().get(f"compiled_model:{model_wrapper.uuid}"))
 
         layers = model_wrapper.layer_manipulator.get_layers()
 
@@ -46,12 +67,14 @@ class ModelCompiler:
             self.current_x += 1
             self.current_y = 0
 
-        keras.Model(inputs=input_layer, outputs=previous_layer).summary()
+        model = keras.Model(inputs=input_layer, outputs=previous_layer)
 
-        redis.json().set(f"compiled_model:{model_wrapper.uuid}", '$', model_wrapper.serialize())
-        redis.expire(f"compiled_model:{model_wrapper.uuid}", 3600) # 1 hour
+        model.summary()
 
-        return keras.Model(inputs=input_layer, outputs=previous_layer)
+        # redis.json().set(f"compiled_model:{model_wrapper.uuid}", '$', model_wrapper.serialize())
+        # redis.expire(f"compiled_model:{model_wrapper.uuid}", 3600) # 1 hour
+
+        return model
 
     def _process_slice(self, slice, input_layer, previous_layer):
         for layer in slice:

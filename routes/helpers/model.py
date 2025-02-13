@@ -60,9 +60,10 @@ class ModelWrapper:
         data_processing_engine (DataProcessingEngine): Handles the data modification pipeline.
         hyperparameter_manager (HyperparameterManager): Manages hyperparameters for layers, data modifications, and optimization algorithms.
         layer_manipulator (LayerManipulator): Keeps track of the current layer structure.
+        compiler (ModelCompiler): Compiles the model into a form that can be trained and evaluated.
     """
 
-    def __init__(self, data_processing_engine, layer_manipulator):
+    def __init__(self, data_processing_engine, layer_manipulator, compiler):
         """
         Initializes the ModelWrapper with the given components.
 
@@ -72,6 +73,7 @@ class ModelWrapper:
         """
         self.data_processing_engine = data_processing_engine
         self.layer_manipulator = layer_manipulator
+        self.compiler = compiler
 
         # generate a unique identifier for the model
         self.uuid = generate_uuid()
