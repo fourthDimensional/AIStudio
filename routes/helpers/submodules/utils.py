@@ -55,7 +55,7 @@ def generate_uuid():
     uuid = str(uid.uuid4())
     attempts = 0
     while redis_client.exists(f'uuid:{uuid}'):
-        if attempts > 5:
+        if attempts > 20:
             raise Exception('UUID generation failed')
 
         uuid = str(uid.uuid4())
