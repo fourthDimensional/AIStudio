@@ -1,5 +1,5 @@
 from redis import Redis
-from rq import Queue
+from rq import Queue, get_current_job
 from rq.worker import Worker, WorkerStatus
 from rq.command import send_shutdown_command, send_kill_horse_command
 from rq.serializers import DefaultSerializer
@@ -7,7 +7,7 @@ from rq.serializers import DefaultSerializer
 from routes.helpers.compiler import ModelCompiler
 from routes.helpers.model import ModelWrapper
 
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping, ModelCheckpoint, LambdaCallback
 
 import time
 
@@ -81,24 +81,17 @@ class JobManager:
 
 
 def train_model(training_config: TrainingConfig, model: ModelWrapper):
-    callbacks = []
+    job = get_current_job()
 
-    # if hasattr(training_config, 'early_stopping'):
-    #     early_stopping = EarlyStopping(
-    #         monitor=training_config.early_stopping['monitor'],
-    #         min_delta=training_config.early_stopping['min_delta'],
-    #         patience=training_config.early_stopping['patience'],
-    #         mode=training_config.early_stopping['mode']
-    #     )
-    #     callbacks.append(early_stopping)
-    #
-    # if hasattr(training_config, 'checkpointing'):
-    #     checkpointing = ModelCheckpoint(
-    #         monitor=training_config.checkpointing['monitor'],
-    #         mode=training_config.checkpointing['mode'],
-    #         save_best_only=training_config.checkpointing['save_best_only']
-    #     )
-    #     callbacks.append(checkpointing)
+    def update_logs(epoch, logs):
+        if 'logs_history' not in job.meta:
+            job.meta['logs_history'] = []
+
+        timestamp = time.time()
+        job.meta['logs_history'].append({'epoch': epoch, 'timestamp': timestamp, **logs})
+        job.save_meta()
+
+    callbacks = [LambdaCallback(on_epoch_end=update_logs)]
 
     dataframe = pd.read_csv('static/datasets/rainfall_amount_regression.csv')
 

@@ -11,12 +11,15 @@ from keras.optimizers import Adam
 from keras.losses import MeanSquaredError
 from keras.metrics import BinaryAccuracy
 
+import matplotlib.pyplot as plt
+
 import os
 
 import pandas as pd
 import keras
 from io import BytesIO
 import time
+import json
 
 # Configuration for Redis connection
 redis_host: str = 'localhost'
@@ -104,3 +107,37 @@ model = job.return_value()
 model.summary()
 
 new_model.deregister(Redis(**REDIS_CONNECTION_INFO))
+keras.utils.plot_model(model, "test.png", rankdir='LR', show_shapes=True)
+
+logs_history = job.get_meta()['logs_history']
+
+def plot_loss_accuracy_history(logs_history):
+    epochs, losses, accuracies = [], [], []
+
+    for entry in logs_history:
+        epochs.append(entry['epoch'])
+        losses.append(entry.get('loss', 0))  # Ensure a default value if missing
+        accuracies.append(entry.get('binary_accuracy', 0))
+
+    fig, ax1 = plt.subplots(figsize=(10, 5))
+
+    ax1.set_xlabel("Epoch")
+    ax1.set_ylabel("Loss", color='tab:blue')
+    ax1.plot(epochs, losses, marker='o', linestyle='-', color='tab:blue', label="Loss")
+    ax1.tick_params(axis='y', labelcolor='tab:blue')
+
+    ax2 = ax1.twinx()
+    ax2.set_ylabel("Accuracy", color='tab:orange')
+    ax2.plot(epochs, accuracies, marker='s', linestyle='--', color='tab:orange', label="Accuracy")
+    ax2.tick_params(axis='y', labelcolor='tab:orange')
+
+    fig.suptitle("Loss and Accuracy Over Time")
+    fig.tight_layout()
+    plt.grid()
+    plt.show()
+
+# save job.meta to a file
+with open('job_meta.json', 'w') as f:
+    json.dump(job.get_meta(), f)
+
+plot_loss_accuracy_history(logs_history)
