@@ -100,6 +100,13 @@ class ModelWrapper:
         """
         return jsonpickle.decode(json.dumps(data))
 
+    def deregister(self, redis_connection):
+        """
+        Deregisters the model from the redis database.
+        """
+        redis_connection.delete(f"uuid:{self.uuid}")
+
+
 class DataProcessingEngine:
     """
     Handles the data modification pipeline.

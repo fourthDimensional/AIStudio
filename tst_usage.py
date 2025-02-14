@@ -92,14 +92,15 @@ model_compiler = ModelCompiler(optimizer=Adam(), loss=MeanSquaredError(), metric
 
 new_model = model.ModelWrapper(dataprocessing_engine, layer_manipulator, model_compiler)
 
+
 job = job_manager.queue_train_job(new_model, None)
 
 while not job.is_finished:
     print("Job is not finished")
-    time.sleep(1)
+    time.sleep(0.1)
 
 model = job.return_value()
 
 model.summary()
 
-keras.utils.plot_model(model, "test.png", rankdir='LR', show_shapes=True)
+new_model.deregister(Redis(**REDIS_CONNECTION_INFO))

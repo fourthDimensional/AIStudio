@@ -64,10 +64,12 @@ class JobManager:
 
         connection = Redis(**self.redis_connection)
 
-        self.compile_queue = Queue('compiling', connection=connection)
         self.train_queue = Queue('training', connection=connection)
         self.inference_queue = Queue('inference', connection=connection)
         self.data_queue = Queue('data', connection=connection)
+
+    def queue_data_job(self, data):
+        pass
 
     def queue_train_job(self, model: ModelWrapper, training_config: TrainingConfig):
         training_config = TrainingConfig(epochs=100, batch_size=11)
