@@ -111,11 +111,6 @@ class DenseLayer(LayerSkeleton):
             use_bias=self.hyperparameters['use_bias'],
             kernel_initializer=self.hyperparameters['kernel_initializer'],
             bias_initializer=self.hyperparameters['bias_initializer'],
-            kernel_regularizer=self.hyperparameters['kernel_regularizer'],
-            bias_regularizer=self.hyperparameters['bias_regularizer'],
-            activity_regularizer=self.hyperparameters['activity_regularizer'],
-            kernel_constraint=self.hyperparameters['kernel_constraint'],
-            bias_constraint=self.hyperparameters['bias_constraint'],
         )
         return layer(previous_layer)
 
@@ -126,11 +121,6 @@ class DenseLayer(LayerSkeleton):
             'use_bias': True,
             'kernel_initializer': 'glorot_uniform',
             'bias_initializer': 'zeros',
-            'kernel_regularizer': None,
-            'bias_regularizer': None,
-            'activity_regularizer': None,
-            'kernel_constraint': None,
-            'bias_constraint': None,
             'lora_rank': None,
         }
 
@@ -141,11 +131,6 @@ class DenseLayer(LayerSkeleton):
             'use_bias': [True, False],
             'kernel_initializer': ['glorot_uniform', 'glorot_normal', 'he_normal', 'he_uniform', 'lecun_normal', 'lecun_uniform'],
             'bias_initializer': ['zeros', 'ones', 'constant', 'uniform', 'normal', 'truncated_normal', 'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform', 'lecun_normal', 'lecun_uniform'],
-            'kernel_regularizer': {'type': 'regularizer'},
-            'bias_regularizer': {'type': 'regularizer'},
-            'activity_regularizer': {'type': 'regularizer'},
-            'kernel_constraint': {'type': 'constraint'},
-            'bias_constraint': {'type': 'constraint'},
             'lora_rank': [None, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         }
 

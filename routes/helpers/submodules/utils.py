@@ -60,7 +60,7 @@ def generate_uuid():
 
         uuid = str(uid.uuid4())
 
-    redis_client.set(f'uuid:{uuid}', 1)
+    redis_client.set(f'uuid:{uuid}', 1, ex=3600)
 
     return uuid
 

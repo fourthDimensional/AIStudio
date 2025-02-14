@@ -33,14 +33,6 @@ class ModelCompiler:
         self.current_x = 0
         self.current_y = 0
 
-    def define_early_stopping(self, monitor, min_delta, patience, mode):
-        self.early_stopping = {
-            'monitor': monitor,
-            'min_delta': min_delta,
-            'patience': patience,
-            'mode': mode
-        }
-
     def compile_model(self, model_wrapper):
         model = self.build_model(model_wrapper)
         model.compile(optimizer=self.optimizer, loss=self.loss, metrics=self.metrics)
@@ -48,11 +40,6 @@ class ModelCompiler:
         return model
 
     def build_model(self, model_wrapper):
-        # redis = Redis(**redis_connection)
-        #
-        # if redis.exists(f"compiled_model:{model_wrapper.uuid}"):
-        #     return ModelWrapper.deserialize(redis.JSON().get(f"compiled_model:{model_wrapper.uuid}"))
-
         layers = model_wrapper.layer_manipulator.get_layers()
 
         self.input_storage = {'input': [], 0: {0: []}}
@@ -70,9 +57,6 @@ class ModelCompiler:
         model = keras.Model(inputs=input_layer, outputs=previous_layer)
 
         model.summary()
-
-        # redis.json().set(f"compiled_model:{model_wrapper.uuid}", '$', model_wrapper.serialize())
-        # redis.expire(f"compiled_model:{model_wrapper.uuid}", 3600) # 1 hour
 
         return model
 

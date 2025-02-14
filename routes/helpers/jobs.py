@@ -17,6 +17,8 @@ import pickle
 # TEMp
 import pandas as pd
 
+# speed up the process
+import tensorflow
 
 """
 WIP Up-to-date Training Class Code
@@ -68,6 +70,7 @@ class JobManager:
         connection = Redis(**self.redis_connection)
 
         self.train_queue = Queue('training', connection=connection)
+        self.evaluation_queue = Queue('evaluation', connection=connection)
         self.inference_queue = Queue('inference', connection=connection)
         self.data_queue = Queue('data', connection=connection)
 
@@ -78,7 +81,7 @@ class JobManager:
         return self.data_queue.enqueue(process_data, model, raw_data, self.redis_connection, cache_key)
 
     def queue_train_job(self, model: ModelWrapper, training_config: TrainingConfig, path, storage_interface: StorageInterface):
-        training_config = TrainingConfig(epochs=100, batch_size=11)
+        training_config = TrainingConfig(epochs=100, batch_size=10)
         # above is a placeholder for now
 
         data_compilation_job = self._queue_data_job(model, path, storage_interface)
@@ -86,6 +89,23 @@ class JobManager:
         job = self.train_queue.enqueue(train_model, training_config, model, depends_on=data_compilation_job)
 
         return job
+
+    def queue_evaluation_job(self, model: ModelWrapper, path, storage_interface: StorageInterface, trained_model):
+        data_compilation_job = self._queue_data_job(model, path, storage_interface)
+
+        job = self.evaluation_queue.enqueue(evaluate_model, trained_model, depends_on=data_compilation_job)
+
+        return job
+
+
+def evaluate_model(trained_model):
+    job = get_current_job()
+
+    x, y = job.dependency.return_value()
+
+    trained_model.evaluate(x, y)
+
+    return trained_model
 
 
 def process_data(model, raw_data, redis_connection_info, cache_key: str):
@@ -120,7 +140,6 @@ def train_model(training_config: TrainingConfig, model: ModelWrapper):
 
     callbacks = [LambdaCallback(on_epoch_end=update_logs)]
 
-    print(job.dependency_ids)
     x, y = job.dependency.return_value()
 
     compiled_model = model.compiler.compile_model(model)

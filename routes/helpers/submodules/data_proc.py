@@ -90,6 +90,7 @@ class DateFeatureExtraction(DataModification):
             re.compile(r'\d{4}-\d{2}-\d{2}'),  # YYYY-MM-DD
             re.compile(r'\d{2}/\d{2}/\d{4}'),  # MM/DD/YYYY
             re.compile(r'\d{2}-\d{2}-\d{4}'),  # DD-MM-YYYY
+            re.compile(r'\d{4}/\d{2}/\d{2}'),  # YYYY/MM/DD
         ]
 
     def apply(self, dataframe):
@@ -135,7 +136,6 @@ class StringLookup(DataModification):
         self.lookup_layer = KerasStringLookup(output_mode='one_hot', vocabulary=lookup_map)
 
     def adapt(self, data):
-        print(data)
         self.lookup_layer.adapt(data[self.column_name])
 
     def apply(self, data):

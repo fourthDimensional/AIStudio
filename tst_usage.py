@@ -1,4 +1,5 @@
 from redis import Redis
+
 from routes.helpers.submodules.storage import RedisFileStorage
 from routes.helpers.submodules.storage import StorageInterface
 from routes.helpers.compiler import ModelCompiler
@@ -9,7 +10,7 @@ import routes.helpers.submodules.data_proc as data_proc
 
 from keras.optimizers import Adam
 from keras.losses import MeanSquaredError
-from keras.metrics import BinaryAccuracy
+from keras.metrics import BinaryAccuracy, Accuracy
 
 import matplotlib.pyplot as plt
 
@@ -44,11 +45,9 @@ job_manager = jobs.JobManager(REDIS_WORKER_CONNECTION_INFO)
 dataset_storage = StorageInterface(RedisFileStorage(Redis(**REDIS_CONNECTION_INFO)))
 
 api_key = '0e88f732d5f4d145130de7e210cd9a03'
-dataset_key = 'rainfall_amount_regression'
+dataset_key = 'classification_small'
 
-dataframe = pd.read_csv('static/datasets/rainfall_amount_regression.csv')
-
-print(os.environ.get('KERAS_BACKEND'))
+dataframe = pd.read_csv(f'static/datasets/{dataset_key}.csv')
 
 csv_buffer = BytesIO()
 dataframe.to_csv(csv_buffer)
@@ -59,50 +58,37 @@ dataset_storage.store_file(dataset_key, csv_buffer.read())
 layer_manipulator = model.LayerManipulator()
 data_processing_engine = model.DataProcessingEngine()
 
-data_processing_engine.add_modification(data_proc.DateFeatureExtraction('date'))
-data_processing_engine.add_modification(data_proc.StringLookup('weather_condition'))
+data_processing_engine.add_modification(data_proc.ColumnDeletion(['time']))
 
-# TODO Column deletion of date_day also deletes date_dayofyear because of the multi-column regex checking
 data_processing_engine.set_input_fields(dataframe)
-data_processing_engine.add_label_column('weather_condition')
+data_processing_engine.add_label_column('infected')
 
 x, y = data_processing_engine.separate_labels(dataframe)
 
-pd.DataFrame(x).to_csv('x.csv')
-pd.DataFrame(y).to_csv('y.csv')
-
-input_layer = layers.InputLayer(input_size=8)
-dense_layer = layers.DenseLayer(units=10)
+input_layer = layers.InputLayer(input_size=21)
+dense_layer = layers.DenseLayer(units=20)
 
 layer_manipulator.add_layer(input_layer, 0, 0)
 layer_manipulator.forward_layer(0, 0)
 layer_manipulator.add_layer(layers.BatchNormalizationLayer(), 1, 0)
 layer_manipulator.forward_layer(1, 0)
-layer_manipulator.add_layer(layers.ReshapeLayer(target_shape=(1, 8)), 2, 0)
+layer_manipulator.add_layer(dense_layer, 2, 0)
 layer_manipulator.forward_layer(2, 0)
-layer_manipulator.add_layer(layers.GRULayer(units=5), 3, 0)
-layer_manipulator.forward_layer(3, 0)
-layer_manipulator.add_layer(layers.FlattenLayer(), 4, 0)
-layer_manipulator.forward_layer(4, 0)
-layer_manipulator.add_layer(layers.DenseLayer(units=3),5, 0)
-
-
-print(layer_manipulator.get_layer_hyperparameters(5, 0))
+layer_manipulator.add_layer(layers.DenseLayer(units=1),3, 0)
 
 
 model_compiler = ModelCompiler(optimizer=Adam(), loss=MeanSquaredError(), metrics=[BinaryAccuracy()])
-# config_packager = jobs.TrainingConfigPackager()
 
 new_model = model.ModelWrapper(data_processing_engine, layer_manipulator, model_compiler)
 
 
-job = job_manager.queue_train_job(new_model, None, 'rainfall_amount_regression', dataset_storage)
+job = job_manager.queue_train_job(new_model, None, dataset_key, dataset_storage)
 
 while not job.is_finished:
-    print("Job is not finished")
     time.sleep(0.1)
 
 model = job.return_value()
+eval_job = job_manager.queue_evaluation_job(new_model, dataset_key, dataset_storage, model)
 
 model.summary()
 
@@ -140,4 +126,4 @@ def plot_loss_accuracy_history(logs_history):
 with open('job_meta.json', 'w') as f:
     json.dump(job.get_meta(), f)
 
-plot_loss_accuracy_history(logs_history)
+# plot_loss_accuracy_history(logs_history)
