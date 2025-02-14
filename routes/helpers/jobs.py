@@ -4,16 +4,19 @@ from rq.worker import Worker, WorkerStatus
 from rq.command import send_shutdown_command, send_kill_horse_command
 from rq.serializers import DefaultSerializer
 
+from routes.helpers.submodules.storage import StorageInterface
 from routes.helpers.compiler import ModelCompiler
 from routes.helpers.model import ModelWrapper
 
 from keras.callbacks import EarlyStopping, ModelCheckpoint, LambdaCallback
+from io import BytesIO
 
 import time
-
+import pickle
 
 # TEMp
 import pandas as pd
+
 
 """
 WIP Up-to-date Training Class Code
@@ -68,17 +71,41 @@ class JobManager:
         self.inference_queue = Queue('inference', connection=connection)
         self.data_queue = Queue('data', connection=connection)
 
-    def queue_data_job(self, data):
-        pass
+    def _queue_data_job(self, model: ModelWrapper, path, storage_interface: StorageInterface):
+        raw_data = storage_interface.get_file(path)
+        cache_key = f'processed_data:{path}:version:{model.data_processing_engine.get_version()}'
 
-    def queue_train_job(self, model: ModelWrapper, training_config: TrainingConfig):
+        return self.data_queue.enqueue(process_data, model, raw_data, self.redis_connection, cache_key)
+
+    def queue_train_job(self, model: ModelWrapper, training_config: TrainingConfig, path, storage_interface: StorageInterface):
         training_config = TrainingConfig(epochs=100, batch_size=11)
         # above is a placeholder for now
 
-        job = self.train_queue.enqueue(train_model, training_config, model)
+        data_compilation_job = self._queue_data_job(model, path, storage_interface)
+
+        job = self.train_queue.enqueue(train_model, training_config, model, depends_on=data_compilation_job)
 
         return job
 
+
+def process_data(model, raw_data, redis_connection_info, cache_key: str):
+    redis_connection = Redis(**redis_connection_info)
+    # Check if the processed data is already cached
+    cached_data = redis_connection.get(cache_key)
+    if cached_data:
+        # Load the cached data
+        x, y = pickle.loads(cached_data)
+    else:
+        # Process the raw data
+        buffer = BytesIO(raw_data)
+        dataframe = pd.read_csv(buffer, index_col=0)
+        dataframe.head()
+        x, y = model.data_processing_engine.separate_labels(dataframe)
+
+        # Cache the processed data
+        redis_connection.set(cache_key, pickle.dumps((x, y)), ex=3600)  # 1 hour
+
+    return x, y
 
 def train_model(training_config: TrainingConfig, model: ModelWrapper):
     job = get_current_job()
@@ -93,9 +120,8 @@ def train_model(training_config: TrainingConfig, model: ModelWrapper):
 
     callbacks = [LambdaCallback(on_epoch_end=update_logs)]
 
-    dataframe = pd.read_csv('static/datasets/rainfall_amount_regression.csv')
-
-    x, y = model.data_processing_engine.separate_labels(dataframe)
+    print(job.dependency_ids)
+    x, y = job.dependency.return_value()
 
     compiled_model = model.compiler.compile_model(model)
 

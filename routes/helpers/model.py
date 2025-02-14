@@ -13,6 +13,7 @@ import logging
 import re
 import jsonpickle
 import json
+import hashlib
 
 from routes.helpers.submodules.utils import generate_uuid
 
@@ -147,7 +148,9 @@ class DataProcessingEngine:
         for modification in self.modifications:
             modification.adapt(data)
             data = modification.apply(data)
+
         return data
+
 
     def clear_modifications(self):
         """
@@ -232,6 +235,21 @@ class DataProcessingEngine:
             fields, labels, test_size=test_size, random_state=random_state
         )
         return fields_train, fields_test, labels_train, labels_test
+
+    def get_version(self):
+        """
+        Returns a deterministic number representing the current state of the data processing engine.
+        Returns:
+            int: The version number.
+        """
+        state = {
+            'modifications': [str(mod) for mod in self.modifications],
+            'input_fields': self.input_fields,
+            'label_columns': self.label_columns
+        }
+        state_str = str(state).encode('utf-8')
+        version_hash = hashlib.md5(state_str).hexdigest()
+        return int(version_hash, 16)
 
 
 class LayerManipulator:

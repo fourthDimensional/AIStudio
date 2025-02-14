@@ -46,39 +46,39 @@ dataset_storage = StorageInterface(RedisFileStorage(Redis(**REDIS_CONNECTION_INF
 api_key = '0e88f732d5f4d145130de7e210cd9a03'
 dataset_key = 'rainfall_amount_regression'
 
-print(os.environ.get('KERAS_BACKEND'))
-
-# data = dataset_storage.get_file(f"{api_key}:{dataset_key}")
-# csv_buffer = BytesIO(data)
-# dataframe = pd.read_csv(csv_buffer)
-
 dataframe = pd.read_csv('static/datasets/rainfall_amount_regression.csv')
 
-layer_manipulator = model.LayerManipulator()
-dataprocessing_engine = model.DataProcessingEngine()
+print(os.environ.get('KERAS_BACKEND'))
 
-dataprocessing_engine.add_modification(data_proc.DateFeatureExtraction('date'))
-dataprocessing_engine.add_modification(data_proc.StringLookup('weather_condition'))
+csv_buffer = BytesIO()
+dataframe.to_csv(csv_buffer)
+csv_buffer.seek(0)  # Move the cursor to the beginning of the buffer
+
+dataset_storage.store_file(dataset_key, csv_buffer.read())
+
+layer_manipulator = model.LayerManipulator()
+data_processing_engine = model.DataProcessingEngine()
+
+data_processing_engine.add_modification(data_proc.DateFeatureExtraction('date'))
+data_processing_engine.add_modification(data_proc.StringLookup('weather_condition'))
 
 # TODO Column deletion of date_day also deletes date_dayofyear because of the multi-column regex checking
+data_processing_engine.set_input_fields(dataframe)
+data_processing_engine.add_label_column('weather_condition')
 
-dataprocessing_engine.add_modification(data_proc.ColumnDeletion(['date_month', 'date_day', 'date_year']))
-dataprocessing_engine.set_input_fields(dataframe)
-dataprocessing_engine.add_label_column('weather_condition')
-
-x, y = dataprocessing_engine.separate_labels(dataframe)
+x, y = data_processing_engine.separate_labels(dataframe)
 
 pd.DataFrame(x).to_csv('x.csv')
 pd.DataFrame(y).to_csv('y.csv')
 
-input_layer = layers.InputLayer(input_size=5)
+input_layer = layers.InputLayer(input_size=8)
 dense_layer = layers.DenseLayer(units=10)
 
 layer_manipulator.add_layer(input_layer, 0, 0)
 layer_manipulator.forward_layer(0, 0)
 layer_manipulator.add_layer(layers.BatchNormalizationLayer(), 1, 0)
 layer_manipulator.forward_layer(1, 0)
-layer_manipulator.add_layer(layers.ReshapeLayer(target_shape=(1, 5)), 2, 0)
+layer_manipulator.add_layer(layers.ReshapeLayer(target_shape=(1, 8)), 2, 0)
 layer_manipulator.forward_layer(2, 0)
 layer_manipulator.add_layer(layers.GRULayer(units=5), 3, 0)
 layer_manipulator.forward_layer(3, 0)
@@ -93,10 +93,10 @@ print(layer_manipulator.get_layer_hyperparameters(5, 0))
 model_compiler = ModelCompiler(optimizer=Adam(), loss=MeanSquaredError(), metrics=[BinaryAccuracy()])
 # config_packager = jobs.TrainingConfigPackager()
 
-new_model = model.ModelWrapper(dataprocessing_engine, layer_manipulator, model_compiler)
+new_model = model.ModelWrapper(data_processing_engine, layer_manipulator, model_compiler)
 
 
-job = job_manager.queue_train_job(new_model, None)
+job = job_manager.queue_train_job(new_model, None, 'rainfall_amount_regression', dataset_storage)
 
 while not job.is_finished:
     print("Job is not finished")
@@ -107,7 +107,7 @@ model = job.return_value()
 model.summary()
 
 new_model.deregister(Redis(**REDIS_CONNECTION_INFO))
-keras.utils.plot_model(model, "test.png", rankdir='LR', show_shapes=True)
+# keras.utils.plot_model(model, "test.png", rankdir='LR', show_shapes=True)
 
 logs_history = job.get_meta()['logs_history']
 
