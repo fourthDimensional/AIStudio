@@ -41,6 +41,20 @@ redis_client = Redis(
 )
 
 
+def get_project_from_redis(api_key, project_id):
+    try:
+        if redis_client.json().arrindex(f"api_key:{api_key}", '$.project_keys', project_id) is None:
+            return {'error': 'Project does not exist'}, BAD_REQUEST, None
+        existing_project = redis_client.json().get(f"project:{project_id}")
+        if existing_project is None:
+            return {'error': 'Project does not exist'}, BAD_REQUEST, None
+    except Exception as error:
+        logging.error(f'Failed to retrieve project from Redis, {error}')
+        return {'error': 'A database connection error occurred, project has not been retrieved'}, BAD_REQUEST, None
+
+    return existing_project, REQUEST_SUCCEEDED, None
+
+
 @project.route('/project', methods=['POST'])
 @require_api_key
 def create_project(api_key):
@@ -63,9 +77,8 @@ def create_project(api_key):
     else:
         description = None
 
-    model_compiler = ModelCompiler()
-    training_config_packager = TrainingConfigPackager()
-    new_project = Project(dataset_key[0], model_compiler, training_config_packager, title, description)
+    new_project = Project(dataset_key[0], title, description)
+    new_project.get_dataset_fields(api_key)
 
     try:
         redis_client.json().set(f"project:{new_project.project_key}", '$', new_project.serialize())
@@ -94,15 +107,9 @@ def delete_project(project_id, api_key):
 @project.route('/project/<project_id>', methods=['GET'])
 @require_api_key
 def get_project(project_id, api_key):
-    try:
-        if redis_client.json().arrindex(f"api_key:{api_key}", '$.project_keys', project_id) is None:
-            return {'error': 'Project does not exist'}, BAD_REQUEST
-        existing_project = redis_client.json().get(f"project:{project_id}")
-        if existing_project is None:
-            return {'error': 'Project does not exist'}, BAD_REQUEST
-    except Exception as error:
-        logging.error(f'Failed to retrieve project from Redis, {error}')
-        return {'error': 'A database connection error occurred, project has not been retrieved'}, BAD_REQUEST
+    existing_project, status, error = get_project_from_redis(api_key, project_id)
+    if error:
+        return existing_project, status
 
     return existing_project, REQUEST_SUCCEEDED
 
@@ -130,5 +137,17 @@ def list_projects(api_key):
 @require_api_key
 def update_project_settings(project_id):
     # update project settings
+
+    return {}, REQUEST_SUCCEEDED
+
+
+@project.route('/project/<project_id>/feature/<field>', methods=['POST'])
+@require_api_key
+def add_feature(api_key, project_id, field):
+    existing_project, status, error = get_project_from_redis(api_key, project_id)
+    if error:
+        return existing_project, status
+
+    logging.info(Project.deserialize(existing_project))
 
     return {}, REQUEST_SUCCEEDED

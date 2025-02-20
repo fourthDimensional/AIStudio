@@ -10,6 +10,8 @@ from routes.helpers.submodules.storage import StorageInterface, RedisFileStorage
 
 from rq import Queue
 from redis import Redis
+from io import BytesIO
+import pandas as pd
 
 # Configuration for Redis connection
 redis_host: str = 'localhost'
@@ -191,21 +193,24 @@ def register_dataset_from_template(template_name, api_key):
     else:
         return {'error': 'Template not found'}, 40
 
-    with open(file_path, 'rb') as f:
-        file_data = f.read()
+    dataframe = pd.read_csv(file_path)
 
+    csv_buffer = BytesIO()
+    dataframe.to_csv(csv_buffer)
+    csv_buffer.seek(0)  # Move the cursor to the beginning of the buffer
 
     # TODO find a better way to access the database here
     redis = current_app.config['DATABASE']
     redis.json().arrappend(f'api_key:{api_key}', '$.dataset_keys', template_name)
     id = redis.json().arrindex(f'api_key:{api_key}', '$.dataset_keys', template_name)[0]
 
-    dataset_storage.store_file(f"{api_key}:{template_name}", file_data, {
+    dataset_storage.store_file(f"{api_key}:{template_name}", csv_buffer.read(), {
                                 'status': 'uploaded',
                                 'name': template_name,
                                 'size': os.path.getsize(file_path),
                                 'entries': len(open(file_path).readlines()),
-                                'id': id}
+                                'id': id,
+                                'columns': dataframe.columns.tolist(),}
                                )
 
     return {'info': 'Dataset registered'}, REQUEST_CREATED

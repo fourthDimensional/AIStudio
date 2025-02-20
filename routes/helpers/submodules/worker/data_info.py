@@ -1,6 +1,5 @@
 import pandas as pd
 import json
-from ydata_profiling import ProfileReport
 from redis import Redis
 import socket
 from rq import get_current_job
@@ -33,7 +32,7 @@ def generate_profile_report(name: str, apikey: str, redis_connection_info: dict)
     job.meta.update(metadata)
     job.save_meta()
 
-    profile = ProfileReport(df, title=f"Profile Report for {name}")
+    # profile = ProfileReport(df, title=f"Profile Report for {name}")
     json_data = profile.to_json()
     redis_client.json().set(f"profile_report:{apikey}:{name}", '$', json.loads(json_data)) # TODO ADD CONSISTENT STRING CLEANING
 

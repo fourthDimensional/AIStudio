@@ -19,10 +19,13 @@ from flask_wtf.csrf import CSRFProtect
 
 from routes.helpers.submodules.auth import generate_api_key, save_api_key, require_api_key, register_session_token, is_valid_api_key, deregister_session_token
 
+SECRET_KEY = os.urandom(32)
+
 # instantiate the app
 app = Flask(__name__)
-csrf = CSRFProtect()
-csrf.init_app(app)
+# app.config['SECRET_KEY'] = SECRET_KEY
+# csrf = CSRFProtect()
+# csrf.init_app(app)
 
 # Talisman(app)
 
@@ -51,8 +54,6 @@ app.register_blueprint(layers)
 app.register_blueprint(data_views)
 app.register_blueprint(workers)
 app.register_blueprint(project)
-
-# save_api_key(generate_api_key(), 'development', 'test', 'user', 'test@email.com')
 
 def setup_logging():
     # Create the root logger
