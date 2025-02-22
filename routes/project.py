@@ -50,7 +50,7 @@ def get_project_from_redis(api_key, project_id):
             return {'error': 'Project does not exist'}, BAD_REQUEST, None
     except Exception as error:
         logging.error(f'Failed to retrieve project from Redis, {error}')
-        return {'error': 'A database connection error occurred, project has not been retrieved'}, BAD_REQUEST, None
+        return {'error': 'A database connection error occurred, project has not been retrieved'}, 500, None
 
     return existing_project, REQUEST_SUCCEEDED, None
 
@@ -85,7 +85,7 @@ def create_project(api_key):
         redis_client.json().arrappend(f"api_key:{api_key}", '$.project_keys', new_project.project_key)
     except Exception as error:
         logging.error(f'Failed to save project to Redis, {error}')
-        return {'error': 'A database connection error occurred, project has not been created'}, BAD_REQUEST
+        return {'error': 'A database connection error occurred, project has not been created'}, 500
 
     return {'info': 'Project created', 'key': new_project.project_key}, REQUEST_CREATED
 
@@ -100,7 +100,7 @@ def delete_project(project_id, api_key):
         redis_client.json().arrpop(f"api_key:{api_key}", '$.project_keys', redis_client.json().arrindex(f"api_key:{api_key}", '$.project_keys', project_id)[0])
     except Exception as error:
         logging.error(f'Failed to delete project from Redis, {error}')
-        return {'error': 'A database connection error occurred, project has not been deleted'}, BAD_REQUEST
+        return {'error': 'A database connection error occurred, project has not been deleted'}, 500
 
     return {'info': 'Successfully deleted the project'}
 
@@ -120,7 +120,7 @@ def list_projects(api_key):
         project_keys = redis_client.json().get(f"api_key:{api_key}", "$.project_keys")[0]
     except Exception as error:
         logging.error(f'Failed to retrieve project list from Redis, {error}')
-        return {'error': 'A database connection error occurred, project list has not been retrieved'}, BAD_REQUEST
+        return {'error': 'A database connection error occurred, project list has not been retrieved'}, 500
 
     if project_keys is None:
         return {'projects': {}}, REQUEST_SUCCEEDED
@@ -148,6 +148,17 @@ def add_feature(api_key, project_id, field):
     if error:
         return existing_project, status
 
-    logging.info(Project.deserialize(existing_project))
+    existing_project = Project.deserialize(existing_project)
 
-    return {}, REQUEST_SUCCEEDED
+    if field in existing_project.dataset_fields:
+        existing_project.features.append(field)
+    else:
+        return {'error': 'Field does not exist in dataset'}, BAD_REQUEST
+
+    try:
+        redis_client.json().set(f"project:{project_id}", '$', existing_project.serialize())
+    except Exception as error:
+        logging.error(f'Failed to save project to Redis, {error}')
+        return {'error': 'A database connection error occurred, project has not been updated'}, 500
+
+    return {'info': 'Feature added'}, REQUEST_SUCCEEDED
