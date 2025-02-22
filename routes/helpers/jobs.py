@@ -76,6 +76,12 @@ class JobManager:
         self.inference_queue = Queue('inference', connection=connection)
         self.data_queue = Queue('data', connection=connection)
 
+    def queue_profile_report_job(self, dataset_key: str, storage_interface: StorageInterface):
+        raw_data = storage_interface.get_file(dataset_key)
+        job = self.data_queue.enqueue(generate_profile_report, raw_data, dataset_key, apikey, self.redis_connection)
+
+        return job
+
     def _queue_data_job(self, model: ModelWrapper, path, storage_interface: StorageInterface):
         raw_data = storage_interface.get_file(path)
         cache_key = f'processed_data:{path}:version:{model.data_processing_engine.get_version()}'
@@ -98,6 +104,34 @@ class JobManager:
         job = self.evaluation_queue.enqueue(evaluate_model, trained_model, depends_on=data_compilation_job)
 
         return job
+
+
+def generate_profile_report(raw_data: bytes, result_key: string, redis_connection_info: dict) -> str:
+    """
+    Queue a profile report job for a dataset.
+
+    :param raw_data: The raw data to generate a profile report for.
+    :param result_key: The key to store the result in Redis.
+    :param redis_connection_info: The connection information for the Redis instance.
+    """
+    redis_client = Redis(**redis_connection_info)
+    job = get_current_job()
+
+    buffer = BytesIO(raw_data)
+    df = pd.read_csv(buffer, index_col=0)
+
+    metadata = df.describe(include='all').to_dict()
+
+    job.meta['handled_by'] = socket.gethostname()
+    job.meta.update(metadata)
+    job.save_meta()
+
+    profile = ProfileReport(df, title=f"Profile Report for {name}")
+    json_data = profile.to_json()
+    redis_client.json().set(f"profile_report:{result_key}", '$',
+                            json.loads(json_data))
+
+    return f"profile_report:{result_key}"
 
 
 def evaluate_model(trained_model):

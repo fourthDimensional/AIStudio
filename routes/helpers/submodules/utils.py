@@ -114,67 +114,6 @@ def verify_signature(data, signature, secret_key):
     return hmac.compare_digest(expected_signature, signature)
 
 
-# TODO Deprecated function, remove once refactored model storage code is in place
-def fetch_model(api_key, model_id, redis_server=redis_client, secret=SECRET_KEY):
-    """
-    Fetch a model from the database using the provided API key and model ID.
-
-    Logs various stages of the operation, including fetching, signature verification, and decoding of the model.
-    If the model's signature is verified, attempts to decode the serialized model.
-
-    :param secret:
-    :param redis_server:
-    :param api_key: The API key associated with the user.
-    :param model_id: The ID of the model to fetch.
-    :return: A tuple containing the decoded model and a status code (1 for success, -1 for failure, 0 if model does not exist).
-    """
-    logging.warning('DEPRECATED - fetch_model()')
-
-    uuid = get_uuid(api_key, redis_server)
-
-    model_key = MODEL_KEY_FORMAT.format(uuid, model_id)
-    signature_key = "model:{}:{}:signature".format(uuid, model_id)
-
-    if not redis_server.exists(model_key):
-        return None, 0
-
-    serialized_model = json.dumps(redis_server.json().get(model_key, MODEL_PATH)[0])
-    signature = redis_server.get(signature_key).encode()
-
-    if verify_signature(serialized_model, signature, secret):
-        return jsonpickle.decode(serialized_model, keys=True, on_missing='error'), 1
-    else:
-        logging.warning(f'SECURITY - Serialized model at "{model_key}" has been modified')
-        return None, -2
-
-
-# TODO Deprecated function, remove once refactored model storage code is in place
-def store_model(api_key, model_id, model, redis_server=redis_client, secret=SECRET_KEY):
-    """
-    Store a model in the database with its associated API key and model ID.
-
-    Serializes the model, generates a signature for it, and then stores both the model and its signature in Redis.
-
-    :param secret:
-    :param redis_server:
-    :param api_key: The API key associated with the user.
-    :param model_id: The ID for the model to store.
-    :param model: The model to be stored.
-    """
-    logging.warning('DEPRECATED - store_model()')
-
-    uuid = get_uuid(api_key, redis_server)
-
-    model_key = MODEL_KEY_FORMAT.format(uuid, model_id)
-    signature_key = "model:{}:{}:signature".format(uuid, model_id)
-    serialized_model = jsonpickle.encode(model, keys=True)
-
-    signature = hmac.new(secret.encode(), serialized_model.encode(), hashlib.sha256).hexdigest()
-
-    redis_server.set(signature_key, signature)
-    redis_server.json().set(model_key, MODEL_PATH, json.loads(serialized_model))
-
-
 def convert_to_dataframe(dataset_path):
     """
     Convert a dataset file to a pandas DataFrame.
@@ -192,27 +131,6 @@ def convert_to_dataframe(dataset_path):
             dataframe_csv = dataframe_csv.dropna(axis=0)
         break
     return dataframe_csv
-
-
-# TODO Add and implement better input sanitation
-def check_id(given_id):
-    """
-    Check if a given ID is a digit and does not exceed the maximum allowed networks per person.
-
-    :param given_id: The ID to be checked.
-    :return: True if the ID is valid, False otherwise.
-    """
-    logging.warning('DEPRECATED - check_id()')
-
-    if not given_id.isdigit():
-        return False
-
-    given_id = int(given_id)
-
-    if given_id > MAX_NETWORKS_PER_PERSON:
-        return False
-
-    return True
 
 def merge_lists(a, b):
     """
@@ -248,27 +166,3 @@ def cleanup_old_logs(profile_dir, max_logs):
         file_to_delete = os.path.join(profile_dir, log_files[i])
         os.remove(file_to_delete)
         logging.info(f"Deleted old profiler log: {file_to_delete}")
-
-
-# TODO Deprecated function
-def delete_model(api_key, model_id, redis_server=redis_client):
-    """
-    Delete a model from the database using the provided API key and model ID.
-
-    :param redis_server:
-    :param api_key: The API key associated with the user.
-    :param model_id: The ID of the model to delete.
-    :return: 1 if the model was successfully deleted, 0 if the model does not exist.
-    """
-    logging.warning('DEPRECATED - delete_model()')
-
-    uuid = get_uuid(api_key, redis_server)
-
-    model_key = MODEL_KEY_FORMAT.format(uuid, model_id)
-
-    if not redis_server.exists(model_key):
-        return 0
-
-    redis_server.json().delete(model_key)
-
-    return 1

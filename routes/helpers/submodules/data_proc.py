@@ -7,50 +7,6 @@ import re
 logger = logging.getLogger(__name__)
 
 """
-Legacy Code
-
-Currently being transitioned to new refactored data processing and modification classes.
-
-Should be removed once the transition is complete and is no longer in use.
-"""
-
-
-class OldDataModification:
-    def process(self, dataframe):
-        raise NotImplementedError
-
-    def __str__(self):
-        raise NotImplementedError
-
-
-class ColumnDeletion(OldDataModification):
-    def __init__(self, column_name):
-        self.type = 'ColumnDeletion'
-        self.column_name = column_name
-
-    def process(self, dataframe):
-        return dataframe.drop(labels=self.column_name, axis=1)
-
-    def __str__(self):
-        return self.column_name
-
-
-class SpecifiedFeature(OldDataModification):
-    def __init__(self, column_name):
-        self.type = 'SpecifiedFeature'
-        self.column_name = column_name
-
-    def process(self, dataframe):
-        return dataframe.drop(labels=self.column_name, axis=1)
-
-    def get_column(self, dataframe):
-        return dataframe.pop(self.column_name)
-
-    def __str__(self):
-        return self.column_name
-
-
-"""
 Up-to-date Data Modification and Processing Class Code
 """
 
@@ -60,14 +16,14 @@ class DataModification:
         raise NotImplementedError
 
     def adapt(self, data):
-        pass
+        raise NotImplementedError
 
 
-data_mod_registry = ClassRegistry[DataModification]()
+modification_registry = ClassRegistry[DataModification]()
 
 
 # TODO Column deletion of date_day also deletes date_dayofyear because of the multi-column regex checking
-@data_mod_registry.register('column_deletion')
+@modification_registry.register('column_deletion')
 class ColumnDeletion(DataModification):
     def __init__(self, column_names):
         self.column_names = column_names
@@ -82,7 +38,7 @@ class ColumnDeletion(DataModification):
         return ', '.join(self.column_names)
 
 
-@data_mod_registry.register('date_feature')
+@modification_registry.register('date_feature')
 class DateFeatureExtraction(DataModification):
     def __init__(self, column_name):
         self.column_name = column_name
@@ -113,14 +69,6 @@ class DateFeatureExtraction(DataModification):
 
         date_features = dataframe[self.column_name].apply(extract_date_features)
 
-        # def normalize(series):
-        #     min_val = series.min()
-        #     max_val = series.max()
-        #     if min_val == max_val:
-        #         return series.apply(lambda x: 0)
-        #     return (series - min_val) / (max_val - min_val)
-
-        # date_features = date_features.apply(normalize, axis=0)
         dataframe = dataframe.drop(columns=[self.column_name])
         dataframe = pd.concat([dataframe, date_features], axis=1)
         return dataframe
@@ -129,7 +77,7 @@ class DateFeatureExtraction(DataModification):
         return self.column_name
 
 
-@data_mod_registry.register('specified_feature')
+@modification_registry.register('specified_feature')
 class StringLookup(DataModification):
     def __init__(self, column_name, lookup_map=None):
         self.column_name = column_name
